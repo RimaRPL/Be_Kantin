@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "strict": true,
+    "allowImportingTsExtensions": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true,
+    "types": ["node"],
+    "typeRoots": ["./src/types", "./node_modules/@types"]
+
+  },
+  "files": ["src/types/express/index.d.ts"],
+  "include": ["src/**/*", "src/types/**/*", "prisma/**/*.ts"],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,162 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// id, username, pw, role:admin_stan, siswa
+model users {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique @db.VarChar(100)
+  password  String   @db.VarChar(100)
+  role      UserType
+
+  is_active  Boolean  @default(true)
+  deleted_at DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  siswa_detail siswa[]
+  stan_detail  stan[]
+}
+
+// id, nama_siswa,alamat, telp, id_user, foto
+model siswa {
+  id         Int      @id @default(autoincrement())
+  nama_siswa String   @db.VarChar(100)
+  alamat     String   @db.Text
+  telp       String   @db.VarChar(20)
+  foto       String   @db.VarChar(225)
+  id_user    Int
+
+  is_active  Boolean  @default(true)
+  deleted_at DateTime?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  users_detail     users       @relation(fields: [id_user], references: [id])
+  transaksi_detail transaksi[]
+}
+
+// id, nama_stan, nama_pemilik, telp, id_user
+model stan {
+  id           Int      @id @default(autoincrement())
+  nama_stan    String   @db.VarChar(100)
+  nama_pemilik String   @db.VarChar(100)
+  telp         String   @db.VarChar(20)
+  id_user      Int
+
+  is_active  Boolean  @default(true)
+  deleted_at DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users_detail     users       @relation(fields: [id_user], references: [id])
+  transaksi_detail transaksi[]
+  menu_detail      menu[]
+}
+
+// id, nama_makanan, harga, jenis, foto, deskripsi, id_stan
+model menu {
+  id           Int      @id @default(autoincrement())
+  nama_makanan String   @db.VarChar(100)
+  harga        Float    @db.Double
+  jenis        MenuType
+  foto         String   @db.VarChar(255)
+  deskripsi    String   @db.Text
+  id_stan      Int
+
+  is_active  Boolean  @default(true) 
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  stan_detail       stan               @relation(fields: [id_stan], references: [id])
+  menu_diskonDetail menu_diskon[]
+  detail_transaksi  detail_transaksi[]
+}
+
+// id, id_menu ,id_diskon 
+model menu_diskon {
+  id        Int      @id @default(autoincrement())
+  id_menu   Int
+  id_diskon Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  menu_detail   menu   @relation(fields: [id_menu], references: [id])
+  diskon_detail diskon @relation(fields: [id_diskon], references: [id])
+}
+
+// id, nama_diskon, persentase_diskon, tanggal_awal, tanggal_akhir
+model diskon {
+  id                Int      @id @default(autoincrement())
+  nama_diskon       String   @db.VarChar(100)
+  persentase_diskon Float    @db.Double
+  tanggal_awal      DateTime
+  tanggal_akhir     DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  menu_diskonDetail menu_diskon[]
+}
+
+// id, tanggal, id_stan, id_siswa, status
+model transaksi {
+  id        Int        @id @default(autoincrement())
+  tanggal   DateTime   @default(now())
+  id_siswa  Int
+  id_stan   Int
+  status    StatusType
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  siswa_detail     siswa              @relation(fields: [id_siswa], references: [id])
+  stan_detail      stan               @relation(fields: [id_stan], references: [id])
+  detail_transaksi detail_transaksi[]
+}
+
+// id, id_transaksi, id_menu, qty, harga_beli
+model detail_transaksi {
+  id           Int      @id @default(autoincrement())
+  id_transaksi Int
+  id_menu      Int
+  qty          Int      @default(0)
+  harga_beli   Float    @db.Double
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  transaksi_detail transaksi @relation(fields: [id_transaksi], references: [id])
+  menu_detail      menu      @relation(fields: [id_menu], references: [id])
+}
+
+enum UserType {
+  admin_stan
+  siswa
+}
+
+enum StatusType {
+  belum_dikonfirmasi
+  dimasak
+  diantar
+  sampai
+}
+
+enum MenuType {
+  makanan
+  minuman
+}
+
