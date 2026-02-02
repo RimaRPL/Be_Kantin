@@ -4,22 +4,22 @@ import { StatusType } from "@prisma/client";
 
 const prisma = new PrismaClient({ errorFormat: "minimal" })
 
-// CREATE
 const createTransaksi = async (req: Request, res: Response) => {
     try {
+        // cek user
         const user = (req as any).user
 
         if (!user) {
-            return res.status(401).json({ message: "Tidak dikenal" })
+            return res.status(401).json({ message: `user tidak dikenal` })
         }
 
         if (user.role !== "siswa") {
             return res.status(403).json({
-                message: "Hanya siswa yang dapat melakukan transaksi"
+                message: `Hanya siswa yang dapat melakukan transaksi`
             })
         }
 
-        // ambil siswa + nama
+        /* mengambil data siswa*/
         const siswa = await prisma.siswa.findFirst({
             where: {
                 id_user: user.id,
@@ -37,147 +37,159 @@ const createTransaksi = async (req: Request, res: Response) => {
             })
         }
 
-        const id_stan = Number(req.body.id_stan)
-        const detail_transaksi = req.body.detail_transaksi
-        const status = StatusType.belum_dikonfirmasi
+        // validasi order
+        const orders = req.body.orders
 
-        const arrMenuId = detail_transaksi.map(
-            (item: any) => item.id_menu
-        )
-
-        // cek stan
-        const stan = await prisma.stan.findFirst({
-            where: {
-                id: id_stan,
-                is_active: true
-            },
-            select: {
-                id: true,
-                nama_stan: true
-            }
-        })
-
-        if (!stan) {
+        if (!Array.isArray(orders) || orders.length === 0) {
             return res.status(400).json({
-                message: "Stan tidak ditemukan"
+                message: `Order tidak valid`
             })
         }
 
         const today = new Date()
+        const status = StatusType.belum_dikonfirmasi
+        const resultTransaksi: any[] = []
 
-        // ambil menu + diskon aktif
-        const menus = await prisma.menu.findMany({
-            where: {
-                id: { in: arrMenuId },
-                id_stan,
-                is_active: true
-            },
-            include: {
-                menu_diskonDetail: {
-                    where: {
-                        diskon_detail: {
-                            tanggal_awal: { lte: today },
-                            tanggal_akhir: { gte: today }
-                        }
-                    },
-                    include: {
-                        diskon_detail: {
-                            select: {
-                                persentase_diskon: true
+        // loop pesanan per stan
+        for (const order of orders) {
+            const { id_stan, detail_transaksi } = order
+
+            //validasi stan
+            const stan = await prisma.stan.findFirst({
+                where: {
+                    id: Number(id_stan),
+                    is_active: true
+                },
+                select: {
+                    id: true,
+                    nama_stan: true
+                }
+            })
+
+            if (!stan) {
+                return res.status(400).json({
+                    message: `Stan ${id_stan} tidak ditemukan`
+                })
+            }
+
+            //validasi menuu
+            const arrMenuId = detail_transaksi.map(
+                (item: any) => item.id_menu
+            )
+
+            // ambil menu dan diskon yang aktif
+            const menus = await prisma.menu.findMany({
+                where: {
+                    id: { in: arrMenuId },
+                    id_stan: stan.id,
+                    is_active: true
+                },
+                include: {
+                    menu_diskonDetail: {
+                        where: {
+                            diskon_detail: {
+                                tanggal_awal: { lte: today },
+                                tanggal_akhir: { gte: today }
+                            }
+                        },
+                        include: {
+                            diskon_detail: {
+                                select: {
+                                    persentase_diskon: true
+                                }
                             }
                         }
                     }
                 }
-            }
-        })
-
-        // validasi menu
-        const invalidMenu = arrMenuId.filter(
-            (id: number) => !menus.map(m => m.id).includes(id)
-        )
-
-        if (invalidMenu.length > 0) {
-            return res.status(400).json({
-                message: "Terdapat menu yang tidak tersedia"
             })
-        }
 
-        // buat transaksi (kepala)
-        const transaksi = await prisma.transaksi.create({
-            data: {
-                id_siswa: siswa.id,
-                id_stan,
-                status
+            //cek menu sudah sesuai dengan stan 
+            const invalidMenu = arrMenuId.filter(
+                (id: number) => !menus.map(m => m.id).includes(id)
+            )
+
+            if (invalidMenu.length > 0) {
+                return res.status(400).json({
+                    message: `Menu tidak valid di stan ${stan.nama_stan}`
+                })
             }
-        })
 
-        let detailDB: any[] = []
-        let detailResponse: any[] = []
+            //satu stan satu transaksi
+            const transaksi = await prisma.transaksi.create({
+                data: {
+                    id_siswa: siswa.id,
+                    id_stan: stan.id,
+                    status
+                }
+            })
 
-        for (const item of detail_transaksi) {
-            const menu = menus.find(m => m.id === item.id_menu)!
-            const harga_awal = menu.harga
+            let detailDB: any[] = []
+            let detailResponse: any[] = []
 
-            const diskonAktif = menu.menu_diskonDetail[0]
-            const persentase_diskon =
-                diskonAktif?.diskon_detail.persentase_diskon ?? 0
+            //    menghitung subtotal dan  diskon
+            for (const item of detail_transaksi) {
+                const menu = menus.find(m => m.id === item.id_menu)!
+                const harga_awal = menu.harga
 
-            const harga_setelah_diskon =
-                persentase_diskon > 0
-                    ? harga_awal - (harga_awal * persentase_diskon) / 100
-                    : harga_awal
+                const diskonAktif = menu.menu_diskonDetail[0]
+                const persentase_diskon =
+                    diskonAktif?.diskon_detail.persentase_diskon ?? 0
 
-            const subtotal = harga_setelah_diskon * item.qty
+                const harga_setelah_diskon =
+                    persentase_diskon > 0
+                        ? harga_awal - (harga_awal * persentase_diskon) / 100
+                        : harga_awal
 
-            // simpan ke DB (sesuai schema)
-            detailDB.push({
+                const subtotal = harga_setelah_diskon * item.qty
+
+                detailDB.push({
+                    id_transaksi: transaksi.id,
+                    id_menu: item.id_menu,
+                    qty: item.qty,
+                    harga_beli: harga_setelah_diskon
+                })
+
+                detailResponse.push({
+                    id_menu: item.id_menu,
+                    qty: item.qty,
+                    harga_awal,
+                    persentase_diskon,
+                    harga_beli: harga_setelah_diskon,
+                    subtotal
+                })
+            }
+
+            await prisma.detail_transaksi.createMany({
+                data: detailDB
+            })
+
+            const total_harga = detailResponse.reduce(
+                (total, item) => total + item.subtotal,
+                0
+            )
+            resultTransaksi.push({
                 id_transaksi: transaksi.id,
-                id_menu: item.id_menu,
-                qty: item.qty,
-                harga_beli: harga_setelah_diskon
-            })
-
-            // response (bebas & informatif)
-            detailResponse.push({
-                id_menu: item.id_menu,
-                qty: item.qty,
-                harga_awal,
-                persentase_diskon,
-                harga_beli: harga_setelah_diskon,
-                subtotal
+                tanggal: transaksi.tanggal,
+                status: transaksi.status,
+                siswa: siswa.nama_siswa,
+                stan: stan.nama_stan,
+                items: detailResponse,
+                total_harga
             })
         }
-
-        await prisma.detail_transaksi.createMany({
-            data: detailDB
-        })
-
-        const total_harga = detailResponse.reduce(
-            (total, item) => total + item.subtotal,
-            0
-        )
 
         return res.status(200).json({
-            message: "Transaksi berhasil dibuat",
-            data: {
-                transaksi: {
-                    id: transaksi.id,
-                    tanggal: transaksi.tanggal,
-                    status: transaksi.status,
-                    siswa: siswa.nama_siswa,
-                    stan: stan.nama_stan
-                },
-                detail: detailResponse,
-                total_harga
-            }
+            message: `Transaksi berhasil dibuat`,
+            data: resultTransaksi
         })
 
     } catch (error) {
         console.error(error)
-        return res.status(500).json({ message: "Internal server error" })
+        return res.status(500).json({
+            message: `Internal server error`
+        })
     }
 }
-
 
 // HELPER UPDATE STATUS
 const updateStatusTransaksi = async (
@@ -363,7 +375,7 @@ const readTransaksiSiswa = async (req: Request, res: Response) => {
             where: {
                 id_siswa: siswa.id,
                 status: statusFilter,
-                 ...(dateFilter && { tanggal: dateFilter })
+                ...(dateFilter && { tanggal: dateFilter })
             },
             orderBy: { tanggal: "desc" },
             select: {
@@ -411,11 +423,15 @@ const readTransaksiSiswa = async (req: Request, res: Response) => {
             })
 
             return {
-                id: trx.id,
+                id_transaksi: trx.id,
                 tanggal: trx.tanggal,
                 status: trx.status,
-                stan: trx.stan_detail,
-                detail,
+                stan: {
+                    id: trx.stan_detail.id,
+                    nama_stan: trx.stan_detail.nama_stan,
+                    pemilik: trx.stan_detail.nama_pemilik
+                },
+                items: detail,
                 total_harga
             }
         })
@@ -425,6 +441,7 @@ const readTransaksiSiswa = async (req: Request, res: Response) => {
             message: type === "history"
                 ? `Riwayat transaksi`
                 : `Transaksi dalam proses`,
+            total_transaksi: result.length,
             data: result
         })
 
@@ -520,7 +537,7 @@ const readTransaksiByBulanAdmin = async (req: Request, res: Response) => {
         })
 
 
-        const result = transaksi.map(trx => {
+        const data = transaksi.map(trx => {
             let total_harga = 0
 
             const detail = trx.detail_transaksi.map(item => {
@@ -536,18 +553,28 @@ const readTransaksiByBulanAdmin = async (req: Request, res: Response) => {
             })
 
             return {
-                id: trx.id,
+                id_transaksi: trx.id,
                 tanggal: trx.tanggal,
                 status: trx.status,
-                siswa: trx.siswa_detail.nama_siswa,
+                siswa: {
+                    id: trx.siswa_detail.id,
+                    nama: trx.siswa_detail.nama_siswa
+                },
                 detail,
                 total_harga
             }
         })
-        return res.status(200).json({
-            message: `Data transaksi berhasil diambil`,
-            data: result
-        })
+         return res.status(200).json({
+      message: "Data transaksi berhasil diambil",
+      informasi: {
+        bulan,
+        tahun,
+        id_stan: stan.id,
+        nama_stan: stan.nama_stan,
+        total_transaksi: data.length
+      },
+      data
+    })
 
     } catch (error) {
         console.log(error)

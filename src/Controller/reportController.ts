@@ -74,13 +74,17 @@ const rekapPemasukanBulanan = async (
         if (transaksi.length === 0) {
             return res.status(200).json({
                 message: `tidak ada pemasukkan di periode ini`,
-                data: {
+                meta: {
                     bulan,
                     tahun,
+                    id_stan: stan.id,
+                    nama_stan: stan.nama_stan
+                },
+                ringkasan: {
                     total_transaksi: 0,
-                    total_pemasukan: 0,
-                    rekap_harian: []
-                }
+                    total_pemasukan: 0
+                },
+                rekap_harian: []
             })
         }
 
@@ -109,15 +113,17 @@ const rekapPemasukanBulanan = async (
 
         return res.status(200).json({
             message: `Rekap pemasukan berhasil diambil`,
-            data: {
-                id_stan: stan.id,
-                nama_stan: stan.nama_stan,
+            meta: {
                 bulan,
                 tahun,
+                id_stan: stan.id,
+                nama_stan: stan.nama_stan
+            },
+            rekap_total: {
                 total_transaksi: transaksi.length,
-                total_pemasukan: totalPemasukan,
-                rekap_per_hari: rekapPerHari
-            }
+                total_pemasukan: totalPemasukan
+            },
+            rekap_harian: rekapPerHari
         })
     } catch (error) {
         console.log(error)
@@ -126,5 +132,6 @@ const rekapPemasukanBulanan = async (
         })
     }
 }
+
 
 export { rekapPemasukanBulanan}

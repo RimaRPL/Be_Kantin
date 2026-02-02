@@ -3,7 +3,6 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient({ errorFormat: "minimal" })
 
-
 // CREATE
 const createDiskon = async (req: Request, res: Response) => {
     try {
@@ -189,7 +188,8 @@ const readDiskon = async (req: Request, res: Response) => {
                             select: {
                                 id: true,
                                 id_stan: true,
-                                nama_makanan: true
+                                nama_makanan: true,
+                                harga: true
                             }
                         }
                     }
@@ -198,25 +198,39 @@ const readDiskon = async (req: Request, res: Response) => {
 
         })
 
-        // buat nambah status
         const now = new Date()
 
         const result = diskon.map(d => {
             let status = "sudah hangus"
             if (now < d.tanggal_awal) status = "akan datang"
-            else if (now >= d.tanggal_awal && now <= d.tanggal_akhir) status = "aktif"
+            else if (now <= d.tanggal_akhir) status = "aktif"
+
+            const menu = d.menu_diskonDetail.map(md => {
+                const hargaAwal = md.menu_detail.harga
+                const hargaSetelahDiskon =
+                    hargaAwal - hargaAwal * (d.persentase_diskon / 100)
+
+                return {
+                    id: md.menu_detail.id,
+                    nama_makanan: md.menu_detail.nama_makanan,
+                    harga_awal: hargaAwal,
+                    harga_setelah_diskon: hargaSetelahDiskon
+                }
+            })
 
             return {
                 id: d.id,
+                id_stan: stan.id,
                 nama_diskon: d.nama_diskon,
                 persentase_diskon: d.persentase_diskon,
                 tanggal_awal: d.tanggal_awal,
                 tanggal_akhir: d.tanggal_akhir,
                 status,
-                // menu yang terkena diskon
-                menu: d.menu_diskonDetail.map(md => md.menu_detail)
+                jumlah_menu: menu.length,
+                menu
             }
         })
+
 
         return res.status(200).json({
             message: "Data diskon stan",
@@ -234,158 +248,122 @@ const readDiskon = async (req: Request, res: Response) => {
 
 // UPDATE
 const updateDiskon = async (req: Request, res: Response) => {
-    try {
-        const user = (req as any).user
-        if (!user) {
-            return res.status(401).json({
-                message: `Tidak dikenal`
-            })
-        }
-
-        if (user.role !== "admin_stan") {
-            return res.status(403).json({
-                message: `Hanya admin stan yang dapat mengakses`
-            })
-        }
-
-        const id_diskon = Number(req.params.id)
-
-        const diskon = await prisma.diskon.findFirst({
-            where: { id: id_diskon },
-            include: {
-                menu_diskonDetail: {
-                    include: {
-                        menu_detail: {
-                            select: {
-                                id: true,
-                                id_stan: true,
-                                nama_makanan: true
-                            }
-                        }
-                    }
-                }
-            }
-        })
-
-        if (!diskon) {
-            return res.status(404).json({
-                message: `Diskon tidak ditemukan`
-            })
-        }
-
-        const stan = await prisma.stan.findFirst({
-            where: {
-                id_user: user.id,
-                is_active: true
-            }
-        })
-
-        if (!stan) {
-            return res.status(400).json({
-                message: `Stan tidak ditemukan`
-            })
-        }
-
-        const isOwner = diskon.menu_diskonDetail.some(
-            md => md.menu_detail.id_stan === stan.id
-        )
-
-        if (!isOwner) {
-            return res.status(403).json({
-                message: `Diskon bukan milik stan Anda`
-            })
-        }
-
-        const now = new Date()
-        const isUpcoming = now < diskon.tanggal_awal
-        const isActive =
-            now >= diskon.tanggal_awal && now <= diskon.tanggal_akhir
-        const isExpired = now > diskon.tanggal_akhir
-
-        const {
-            nama_diskon,
-            persentase_diskon,
-            tanggal_awal,
-            tanggal_akhir,
-            menu_id
-        } = req.body
-
-        if (isExpired) {
-            return res.status(400).json({
-                message: `Diskon sudah berakhir dan tidak dapat diupdate`
-            })
-        }
-
-        if (isActive) {
-            if (
-                persentase_diskon !== undefined ||
-                tanggal_awal !== undefined ||
-                menu_id !== undefined
-            ) {
-                return res.status(400).json({
-                    message:
-                        `Diskon aktif hanya boleh mengubah nama dan tanggal akhir`
-                })
-            }
-        }
-
-        if (tanggal_awal && tanggal_akhir) {
-            if (new Date(tanggal_awal) >= new Date(tanggal_akhir)) {
-                return res.status(400).json({
-                    message: `Tanggal diskon tidak valid`
-                })
-            }
-        }
-
-        if (persentase_diskon !== undefined) {
-            if (persentase_diskon <= 0 || persentase_diskon >= 100) {
-                return res.status(400).json({
-                    message: `Persentase diskon tidak valid`
-                })
-            }
-        }
-
-        const updatedDiskon = await prisma.diskon.update({
-            where: { id: id_diskon },
-            data: {
-                nama_diskon,
-                persentase_diskon,
-                tanggal_awal: tanggal_awal
-                    ? new Date(tanggal_awal)
-                    : undefined,
-                tanggal_akhir: tanggal_akhir
-                    ? new Date(tanggal_akhir)
-                    : undefined
-            }
-        })
-
-        if (isUpcoming && menu_id) {
-            await prisma.menu_diskon.deleteMany({
-                where: { id_diskon }
-            })
-
-            const menuDiskonData = menu_id.map((id_menu: number) => ({
-                id_menu,
-                id_diskon
-            }))
-
-            await prisma.menu_diskon.createMany({
-                data: menuDiskonData
-            })
-        }
-
-        return res.status(200).json({
-            message: `Diskon berhasil diperbarui`,
-            data: updatedDiskon
-        })
-
-    } catch (error) {
-        console.log(error)
-        return res.status(500).json({
-            message: `Terjadi kesalahan pada server`
-        })
+  try {
+    const user = (req as any).user
+    if (!user || user.role !== "admin_stan") {
+      return res.status(403).json({ message: `Akses ditolak` })
     }
+
+    const id_diskon = Number(req.params.id)
+
+    const stan = await prisma.stan.findFirst({
+      where: { id_user: user.id, is_active: true }
+    })
+    if (!stan) {
+      return res.status(404).json({ message: `Stan tidak ditemukan` })
+    }
+
+    const diskon = await prisma.diskon.findFirst({
+      where: {
+        id: id_diskon,
+        menu_diskonDetail: {
+          some: { menu_detail: { id_stan: stan.id } }
+        }
+      }
+    })
+    if (!diskon) {
+      return res.status(404).json({ message: `Diskon tidak ditemukan` })
+    }
+
+    const now = new Date()
+    if (now > diskon.tanggal_akhir) {
+      return res.status(400).json({ message: `Diskon sudah berakhir` })
+    }
+
+    const {
+      nama_diskon,
+      persentase_diskon,
+      tanggal_awal,
+      tanggal_akhir,
+      menu_id
+    } = req.body
+
+    await prisma.diskon.update({
+      where: { id: id_diskon },
+      data: {
+        nama_diskon,
+        persentase_diskon,
+        tanggal_awal: tanggal_awal ? new Date(tanggal_awal) : undefined,
+        tanggal_akhir: tanggal_akhir ? new Date(tanggal_akhir) : undefined
+      }
+    })
+
+    if (now < diskon.tanggal_awal && menu_id) {
+      await prisma.menu_diskon.deleteMany({ where: { id_diskon } })
+      await prisma.menu_diskon.createMany({
+        data: menu_id.map((id_menu: number) => ({ id_menu, id_diskon }))
+      })
+    }
+
+    const result = await prisma.diskon.findFirst({
+      where: { id: id_diskon },
+      include: {
+        menu_diskonDetail: {
+          include: {
+            menu_detail: {
+              select: {
+                id: true,
+                id_stan: true,
+                nama_makanan: true,
+                harga: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    const status =
+      now < result!.tanggal_awal
+        ? "akan datang"
+        : now <= result!.tanggal_akhir
+        ? "aktif"
+        : "sudah hangus"
+
+    const menu = result!.menu_diskonDetail.map(md => {
+      const harga = md.menu_detail.harga
+      return {
+        id: md.menu_detail.id,
+        nama_makanan: md.menu_detail.nama_makanan,
+        harga_awal: harga,
+        harga_setelah_diskon: Math.round(
+          harga - harga * (result!.persentase_diskon / 100)
+        )
+      }
+    })
+
+    return res.status(200).json({
+      message: "Data diskon stan",
+      data: [
+        {
+          id: result!.id,
+          id_stan: result!.menu_diskonDetail[0]?.menu_detail.id_stan ?? null,
+          nama_diskon: result!.nama_diskon,
+          persentase_diskon: result!.persentase_diskon,
+          tanggal_awal: result!.tanggal_awal,
+          tanggal_akhir: result!.tanggal_akhir,
+          status,
+          jumlah_menu: menu.length,
+          menu
+        }
+      ]
+    })
+  } catch (err) {
+    console.log(err)
+    return res.status(500).json({ message: "Terjadi kesalahan server" })
+  }
 }
+
 
 // DELETE
 const deleteDiskon = async (req: Request, res: Response) => {
@@ -478,4 +456,4 @@ const deleteDiskon = async (req: Request, res: Response) => {
     }
 }
 
-export { createDiskon, readDiskon, updateDiskon, deleteDiskon}
+export { createDiskon, readDiskon, updateDiskon, deleteDiskon }
