@@ -26,9 +26,23 @@ router.patch(
 router.get(
     `/siswa`, [verifyToken, verifySiswa], readTransaksiSiswa
 )
+// bisa filter berdasarkan status 
+/**
+ * /siswa -- semua status jadi satu kec yang sampai krn masuk histori
+ * /siswa?status=belum_dikonfirmasi // dimasak // diantar
+ * untuk melihat histori khusus status sampai dan hrs ada bulan 
+ * /siswa?type=history&bulan=...
+ */
 
 router.get(
     `/admin`, [verifyToken, verifyAdmin], readTransaksiByBulanAdmin
 )
+//bisa difilter
+/**
+ * harus disertai bulan dan tahun 
+ * /admin?bulan=...&tahun=...
+ * dengan filter status
+ * /admin?bulan=...&tahun=...&status=belum_dikonfirmasi // dimasak // diantar //sampai
+ */
 
 export default router

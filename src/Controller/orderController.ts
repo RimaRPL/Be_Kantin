@@ -307,6 +307,9 @@ const readTransaksiSiswa = async (req: Request, res: Response) => {
         const user = (req as any).user
         const type = req.query.type // untuk filter berdasarkan jenis status
         const bulan = Number(req.query.bulan)
+        const statusQuery = req.query.status as StatusType | undefined
+
+
         let tahun = Number(req.query.tahun)
 
         if (!user) {
@@ -339,17 +342,21 @@ const readTransaksiSiswa = async (req: Request, res: Response) => {
         let statusFilter: any
 
         if (type === "history") {
-            statusFilter = {
-                in: [StatusType.sampai]
-            }
+            statusFilter = StatusType.sampai
         } else {
-            statusFilter = {
-                in: [StatusType.belum_dikonfirmasi,
-                StatusType.dimasak,
-                StatusType.diantar
-                ]
+            if (statusQuery) {
+                statusFilter = statusQuery
+            } else {
+                statusFilter = {
+                    in: [
+                        StatusType.belum_dikonfirmasi,
+                        StatusType.dimasak,
+                        StatusType.diantar
+                    ]
+                }
             }
         }
+
 
         // FILTER BULAN
         let dateFilter: any = undefined
@@ -455,6 +462,7 @@ const readTransaksiSiswa = async (req: Request, res: Response) => {
 const readTransaksiByBulanAdmin = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user
+        const status = req.query.status as StatusType | undefined
 
         if (!user) {
             return res.status(401).json({
@@ -503,7 +511,8 @@ const readTransaksiByBulanAdmin = async (req: Request, res: Response) => {
                 tanggal: {
                     gte: startDate,
                     lte: endDate
-                }
+                },
+                ...(status && {status})
             },
             orderBy: {
                 tanggal: "desc"
@@ -564,17 +573,17 @@ const readTransaksiByBulanAdmin = async (req: Request, res: Response) => {
                 total_harga
             }
         })
-         return res.status(200).json({
-      message: "Data transaksi berhasil diambil",
-      informasi: {
-        bulan,
-        tahun,
-        id_stan: stan.id,
-        nama_stan: stan.nama_stan,
-        total_transaksi: data.length
-      },
-      data
-    })
+        return res.status(200).json({
+            message: "Data transaksi berhasil diambil",
+            informasi: {
+                bulan,
+                tahun,
+                id_stan: stan.id,
+                nama_stan: stan.nama_stan,
+                total_transaksi: data.length
+            },
+            data
+        })
 
     } catch (error) {
         console.log(error)

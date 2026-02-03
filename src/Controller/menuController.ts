@@ -70,7 +70,6 @@ const createMenu = async (req: Request, res: Response) => {
 }
 
 // READ
-// READ
 const readMenu = async (req: Request, res: Response) => {
   try {
     const search = req.query.search?.toString() ?? "";
@@ -165,6 +164,95 @@ const readMenu = async (req: Request, res: Response) => {
   }
 };
 
+// READ MENU BY ID
+const getMenuById = async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id)
+    const today = new Date()
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        message: `ID menu tidak valid`
+      })
+    }
+
+    const menu = await prisma.menu.findFirst({
+      where: {
+        id,
+        is_active: true,
+        stan_detail: {
+          is_active: true,
+          deleted_at: null
+        }
+      },
+      include: {
+        stan_detail: {
+          select: {
+            id: true,
+            nama_stan: true
+          }
+        },
+        menu_diskonDetail: {
+          where: {
+            diskon_detail: {
+              tanggal_awal: { lte: today },
+              tanggal_akhir: { gte: today }
+            }
+          },
+          include: {
+            diskon_detail: {
+              select: {
+                nama_diskon: true,
+                persentase_diskon: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    if (!menu) {
+      return res.status(404).json({
+        message: `Menu tidak ditemukan`
+      })
+    }
+
+    const harga_awal = menu.harga
+    const diskonRelasi = menu.menu_diskonDetail[0]
+    const diskon = diskonRelasi?.diskon_detail
+
+    const persentase_diskon = diskon?.persentase_diskon ?? 0
+    const harga_setelah_diskon =
+      persentase_diskon > 0
+        ? Math.round(harga_awal - (harga_awal * persentase_diskon) / 100)
+        : harga_awal
+
+    return res.status(200).json({
+      message: "Detail menu",
+      data: {
+        id: menu.id,
+        nama_makanan: menu.nama_makanan,
+        jenis: menu.jenis,
+        deskripsi: menu.deskripsi,
+        foto: menu.foto,
+        harga_awal,
+        diskon_detail: {
+          nama_diskon: diskon?.nama_diskon ?? null,
+          persentase_diskon
+        },
+        harga_setelah_diskon,
+        stan: menu.stan_detail
+      }
+    })
+
+  } catch (error) {
+    console.error(error)
+    return res.status(500).json({
+      message: `Terjadi kesalahan pada server`
+    })
+  }
+}
+
 
 // UPDATE
 const updateMenu = async (req: Request, res: Response) => {
@@ -240,4 +328,4 @@ const deleteMenu = async (req: Request, res: Response) => {
 }
 
 
-export { createMenu, readMenu, updateMenu, deleteMenu }
+export { createMenu, readMenu, getMenuById, updateMenu, deleteMenu }
