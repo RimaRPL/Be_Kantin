@@ -171,9 +171,11 @@ const createTransaksi = async (req: Request, res: Response) => {
                 id_transaksi: transaksi.id,
                 tanggal: transaksi.tanggal,
                 status: transaksi.status,
+                id_siswa: transaksi.id_siswa,
                 siswa: siswa.nama_siswa,
+                id_stan: transaksi.id_stan,
                 stan: stan.nama_stan,
-                items: detailResponse,
+                detail_transaksi: detailResponse,
                 total_harga
             })
         }
