@@ -309,8 +309,7 @@ const readTransaksiSiswa = async (req: Request, res: Response) => {
         const user = (req as any).user
         const type = req.query.type // untuk filter berdasarkan jenis status
         const bulan = Number(req.query.bulan)
-        const statusQuery = req.query.status as StatusType | undefined
-
+        const statusQuery = req.query.status as StatusType | undefined //filter status
 
         let tahun = Number(req.query.tahun)
 
