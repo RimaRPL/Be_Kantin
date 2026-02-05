@@ -56,7 +56,7 @@ const verifyAdmin = (req: Request, res: Response, next: NextFunction) => {
     next()
   } else {
     res.status(403).json({
-      message: `Forbidden: Admin access required`
+      message: `Hanya admin yang memiliki akses`
     })
   }
 }
@@ -67,7 +67,7 @@ const verifySiswa = (req: Request, res: Response, next: NextFunction) => {
     next()
   } else {
     res.status(403).json({
-      message: `Forbidden: Siswa access required`
+      message: `Hanya siswa yang memiliki akses`
     })
   }
 }
@@ -97,7 +97,7 @@ const verifyAdminorSiswa = async (
     }
 
     return res.status(403).json({
-      message: `Forbidden: Anda tidak memiliki akses`
+      message: `Anda tidak memiliki akses`
     })
   }
 
@@ -129,14 +129,13 @@ const adminSelf = async (
     }
 
     return res.status(403).json({
-      message: `Forbidden: Anda tidak memiliki akses`
+      message: `anda tidak memiliki akses`
     })
   }
   return next()
 }
 
-
-
+// vaidasi untuk login
 const authSchema = Joi.object({
   username: Joi.string().required(),
   password: Joi.string().required()

@@ -6,7 +6,9 @@ export const notaHtml = (data: {
   jam: string
   items: {
     namaMenu: string
-    harga: number
+    harga_awal: number
+    persentase_diskon: number
+    harga_beli: number
     qty: number
     subtotal: number
   }[]
@@ -14,156 +16,139 @@ export const notaHtml = (data: {
   const formatRp = (n: number) =>
     "Rp" + n.toLocaleString("id-ID")
 
-  const rows = data.items
-    .map(item => `
-      <tr>
-        <td class="col-menu">${item.namaMenu}</td>
-        <td class="col-number">${formatRp(item.harga)}</td>
-        <td class="col-qty">${item.qty}</td>
-        <td class="col-number">${formatRp(item.subtotal)}</td>
-      </tr>
-    `)
-    .join("")
+  const rows = data.items.map(item => `
+    <tr>
+      <td class="menu">
+        <div class="menu-name">${item.namaMenu}</div>
+        ${
+          item.persentase_diskon > 0
+            ? `<div class="price-note">
+                <span class="old">${formatRp(item.harga_awal)}</span>
+                → <strong>${formatRp(item.harga_beli)}</strong>
+                (Diskon ${item.persentase_diskon}%)
+              </div>`
+            : `<div class="price-note">
+                ${formatRp(item.harga_beli)}
+              </div>`
+        }
+      </td>
+      <td class="qty">${item.qty}x</td>
+      <td class="price">${formatRp(item.subtotal)}</td>
+    </tr>
+  `).join("")
 
-  const total = data.items.reduce(
-    (sum, item) => sum + item.subtotal,
-    0
-  )
+  const total = data.items.reduce((sum, i) => sum + i.subtotal, 0)
 
   return `
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <style>
   body {
     width: 58mm;
-    margin: 0 auto;
+    margin: 0;
     padding: 6px;
     font-family: monospace;
     font-size: 11px;
-    line-height: 1.4;
     color: #000;
   }
 
-  .center {
-    text-align: center;
-  }
+  .center { text-align: center; }
 
-  .stan-name {
-    font-size: 15px;
+  .title {
+    font-size: 13px;
     font-weight: bold;
-    letter-spacing: 1px;
-    margin-bottom: 2px;
+    letter-spacing: 0.5px;
   }
 
-  .sub {
+  .subtitle {
     font-size: 10px;
-    margin-bottom: 6px;
+    margin-top: 2px;
   }
 
-  .info {
-    font-size: 10px;
-    margin-bottom: 4px;
-  }
-
-  .info-row {
-    display: flex;
-    justify-content: space-between;
-  }
-
-  .separator {
-    margin: 6px 0;
+  hr {
+    border: none;
     border-top: 1px dashed #000;
-    text-align: center;
-    font-size: 10px;
-    font-weight: bold;
-    padding-top: 3px;
+    margin: 6px 0;
   }
 
   table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 10px;
   }
 
   th {
+    font-size: 10px;
     text-align: left;
     border-bottom: 1px solid #000;
     padding-bottom: 3px;
   }
 
   td {
-    padding: 3px 0;
+    padding: 4px 0;
+    vertical-align: top;
   }
 
-  .col-menu {
-    width: 40%;
+  .menu { width: 60%; }
+  .qty {
+    width: 10%;
+    text-align: center;
   }
-
-  .col-number {
+  .price {
     width: 30%;
     text-align: right;
   }
 
-  .col-qty {
-    width: 10%;
-    text-align: center;
+  .menu-name {
+    font-weight: bold;
   }
 
-  .total-section {
-    margin-top: 6px;
-    padding-top: 4px;
-    border-top: 1px solid #000;
+  .price-note {
+    font-size: 9px;
+    color: #444;
   }
 
-  .total-row {
-    display: flex;
-    justify-content: space-between;
+  .old {
+    text-decoration: line-through;
+    opacity: 0.7;
+  }
+
+  .summary {
     font-size: 12px;
     font-weight: bold;
+    text-align: right;
   }
 
   .footer {
     margin-top: 8px;
-    text-align: center;
     font-size: 9px;
+    text-align: center;
+    letter-spacing: 0.3px;
   }
 </style>
-
 </head>
 
 <body>
+
   <div class="center">
-    <div class="stan-name">${data.namaStan}</div>
-    <div class="sub">Pelanggan: ${data.namaSiswa}</div>
+    <div class="title">${data.namaStan}</div>
+    <div class="subtitle">Pelanggan: ${data.namaSiswa}</div>
   </div>
 
-  <div class="info-row">
-    <div>ID pesanan</div>
-    <div>#${data.orderId}</div>
-  </div>
+  <hr/>
 
-  <div class="info-row">
-    <div>Tanggal</div>
-    <div>${data.tanggal}</div>
-  </div>
+  ID: #${data.orderId}<br/>
+  tanggal: ${data.tanggal} - jam: ${data.jam}
 
-  <div class="info-row">
-    <div>Waktu</div>
-    <div>${data.jam}</div>
-  </div>
-
-  <div class="separator">DETAIL PESANAN</div>
+  <hr/>
 
   <table>
     <thead>
       <tr>
-        <th class="col-menu">Menu</th>
-        <th class="col-number">Harga</th>
-        <th class="col-qty">Qty</th>
-        <th class="col-number">Subtotal</th>
+        <th>Menu</th>
+        <th class="qty">Qty</th>
+        <th class="price">Total</th>
       </tr>
     </thead>
     <tbody>
@@ -171,18 +156,16 @@ export const notaHtml = (data: {
     </tbody>
   </table>
 
-  <div class="total-section">
-    <div class="total-row">
-      <div>TOTAL</div>
-      <div>${formatRp(total)}</div>
-    </div>
+  <hr/>
+
+  <div class="summary">
+    TOTAL ${formatRp(total)}
   </div>
 
   <div class="footer">
-    <div><strong>TERIMA KASIH</strong></div>
-    <div>Pesanan telah selesai</div>
-    <div>${new Date().getFullYear()} © ${data.namaStan}</div>
+    Terima kasih
   </div>
+
 </body>
 </html>
 `

@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "binary"
 }
 
@@ -16,12 +16,12 @@ datasource db {
 
 // id, username, pw, role:admin_stan, siswa
 model users {
-  id        Int      @id @default(autoincrement())
-  username  String   @unique @db.VarChar(100)
-  password  String   @db.VarChar(100)
-  role      UserType
+  id       Int      @id @default(autoincrement())
+  username String   @unique @db.VarChar(100)
+  password String   @db.VarChar(100)
+  role     UserType
 
-  is_active  Boolean  @default(true)
+  is_active  Boolean   @default(true)
   deleted_at DateTime?
 
   createdAt DateTime @default(now())
@@ -33,18 +33,18 @@ model users {
 
 // id, nama_siswa,alamat, telp, id_user, foto
 model siswa {
-  id         Int      @id @default(autoincrement())
-  nama_siswa String   @db.VarChar(100)
-  alamat     String   @db.Text
-  telp       String   @db.VarChar(20)
-  foto       String   @db.VarChar(225)
+  id         Int    @id @default(autoincrement())
+  nama_siswa String @db.VarChar(100)
+  alamat     String @db.Text
+  telp       String @db.VarChar(20)
+  foto       String @db.VarChar(225)
   id_user    Int
 
-  is_active  Boolean  @default(true)
+  is_active  Boolean   @default(true)
   deleted_at DateTime?
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   users_detail     users       @relation(fields: [id_user], references: [id])
   transaksi_detail transaksi[]
@@ -52,17 +52,17 @@ model siswa {
 
 // id, nama_stan, nama_pemilik, telp, id_user
 model stan {
-  id           Int      @id @default(autoincrement())
-  nama_stan    String   @db.VarChar(100)
-  nama_pemilik String   @db.VarChar(100)
-  telp         String   @db.VarChar(20)
+  id           Int    @id @default(autoincrement())
+  nama_stan    String @db.VarChar(100)
+  nama_pemilik String @db.VarChar(100)
+  telp         String @db.VarChar(20)
   id_user      Int
 
-  is_active  Boolean  @default(true)
+  is_active  Boolean   @default(true)
   deleted_at DateTime?
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   users_detail     users       @relation(fields: [id_user], references: [id])
   transaksi_detail transaksi[]
@@ -79,10 +79,10 @@ model menu {
   deskripsi    String   @db.Text
   id_stan      Int
 
-  is_active  Boolean  @default(true) 
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  is_active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   stan_detail       stan               @relation(fields: [id_stan], references: [id])
   menu_diskonDetail menu_diskon[]
@@ -131,13 +131,16 @@ model transaksi {
 
 // id, id_transaksi, id_menu, qty, harga_beli
 model detail_transaksi {
-  id           Int      @id @default(autoincrement())
-  id_transaksi Int
-  id_menu      Int
-  qty          Int      @default(0)
-  harga_beli   Float    @db.Double
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                Int      @id @default(autoincrement())
+  id_transaksi      Int
+  id_menu           Int
+  qty               Int      @default(0)
+  harga_beli        Float    @db.Double
+  harga_awal        Float    @default(0)
+  persentase_diskon Float    @default(0)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   transaksi_detail transaksi @relation(fields: [id_transaksi], references: [id])
   menu_detail      menu      @relation(fields: [id_menu], references: [id])
@@ -159,4 +162,3 @@ enum MenuType {
   makanan
   minuman
 }
-

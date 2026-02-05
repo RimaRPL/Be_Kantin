@@ -41,6 +41,4 @@ const updateStanValidation = (req: Request, res: Response, next: NextFunction) =
     return next()
 }
 
-
-
 export { createAdminValidation, updateStanValidation}

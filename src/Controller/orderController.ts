@@ -126,7 +126,7 @@ const createTransaksi = async (req: Request, res: Response) => {
             let detailDB: any[] = []
             let detailResponse: any[] = []
 
-            //    menghitung subtotal dan  diskon
+            // menghitung subtotal dan  diskon
             for (const item of detail_transaksi) {
                 const menu = menus.find(m => m.id === item.id_menu)!
                 const harga_awal = menu.harga
@@ -146,6 +146,8 @@ const createTransaksi = async (req: Request, res: Response) => {
                     id_transaksi: transaksi.id,
                     id_menu: item.id_menu,
                     qty: item.qty,
+                    harga_awal: harga_awal,
+                    persentase_diskon: persentase_diskon,
                     harga_beli: harga_setelah_diskon
                 })
 
@@ -513,7 +515,7 @@ const readTransaksiByBulanAdmin = async (req: Request, res: Response) => {
                     gte: startDate,
                     lte: endDate
                 },
-                ...(status && {status})
+                ...(status && { status })
             },
             orderBy: {
                 tanggal: "desc"

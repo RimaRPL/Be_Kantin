@@ -14,7 +14,7 @@ const createSiswa = async (req: Request, res: Response) => {
         const telp: string = req.body.telp
         const foto: string = req.file?.filename || ""
 
-        // ini untuk bagian users
+        // ini untuk bagian tabel users
         const username: string = req.body.username
         const password: string = req.body.password
 
