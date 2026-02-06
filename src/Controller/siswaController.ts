@@ -9,6 +9,8 @@ const prisma = new PrismaClient({ errorFormat: "minimal" });
 // CREATE
 const createSiswa = async (req: Request, res: Response) => {
     try {
+
+        //ambil data dari request
         const nama_siswa: string = req.body.nama_siswa
         const alamat: string = req.body.alamat
         const telp: string = req.body.telp
@@ -25,6 +27,8 @@ const createSiswa = async (req: Request, res: Response) => {
         }
 
         const hashPassword = await bcrypt.hash(password, 12)
+        
+        //menyimpan di db
         const newSiswa = await prisma.users.create({
             data: {
                 username,
@@ -37,9 +41,10 @@ const createSiswa = async (req: Request, res: Response) => {
                 }
             },
             include: {
-                siswa_detail: true
+                siswa_detail: true   //mencantumkan detail siswa
             }
         })
+
         return res.status(200).json({
             message: `Siswa telah dibuat`,
             data: newSiswa
@@ -76,10 +81,12 @@ const readSiswa = async (req: Request, res: Response) => {
                 }
             }
         })
+
         return res.status(200).json({
             message: `Siswa telah ditampilkan`,
             data: allSiswa
         })
+
     } catch (error) {
         console.log(error)
         res.status(500).json(error)
@@ -125,6 +132,7 @@ const updateSiswa = async (req: Request, res: Response) => {
             }
         }
 
+        //ambil data baru
         const {
             nama_siswa, alamat, telp, username, password
         } = req.body
@@ -136,7 +144,7 @@ const updateSiswa = async (req: Request, res: Response) => {
             })
 
             if (cekUsername) {
-                return res.status(400).json({
+                return res.status(409).json({
                     message: `Username sudah digunakan `
                 })
             }
@@ -145,7 +153,7 @@ const updateSiswa = async (req: Request, res: Response) => {
         //Update password
         let newPassword = findSiswa.users_detail.password
         if (password) {
-            newPassword = await bcrypt.hash(password, 10)
+            newPassword = await bcrypt.hash(password, 12)
         }
 
         // update users dan siswa

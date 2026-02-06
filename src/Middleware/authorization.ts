@@ -5,6 +5,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient()
 
+// bentuk data dari isi token
 interface JwtPayload {
   id: number;
   username: string;
@@ -39,7 +40,7 @@ const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
       })
     }
 
-    // menempelkan hasil decode token ke request
+    // menempelkan hasil decode token ke request, untuk memverifikasi role
     (req as any).user = decoded
 
     next()
@@ -101,7 +102,7 @@ const verifyAdminorSiswa = async (
     })
   }
 
-  return res.status(403).json({ message: `Forbidden` })
+  return res.status(403).json({ message: `Anda tidak memiliki akses` })
 }
 
 // verifikasi jika yg bisa akses hanya admin id itu sendiri
@@ -112,7 +113,7 @@ const adminSelf = async (
   const targetAdminId = Number(req.params.id)
 
   if (user.role !== "admin_stan") {
-    return res.status(403).json({ message: `Forbidden` })
+    return res.status(403).json({ message: `Tidak memiliki akses` })
   }
 
   if (user.role === "admin_stan") {
@@ -129,7 +130,7 @@ const adminSelf = async (
     }
 
     return res.status(403).json({
-      message: `anda tidak memiliki akses`
+      message: `Anda tidak memiliki akses`
     })
   }
   return next()

@@ -79,31 +79,37 @@ const updateMenuValidation = (req: Request, res: Response, next: NextFunction): 
 
 
 // CEK stan active
-const checkStanActive = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  const user = (req as any).user
+const checkStanActive = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        // ambil user dari middleware verifyToken
+        const user = (req as any).user
 
-  const stan = await prisma.stan.findFirst({
-    where: {
-      id_user: user.id,   
-      is_active: true
+        // cari stan milik user yang masih aktif
+        const stan = await prisma.stan.findFirst({
+            where: {
+                id_user: user.id,
+                is_active: true
+            }
+        })
+
+        // jika stan tidak ditemukan atau tidak aktif
+        if (!stan) {
+            return res.status(400).json({
+                message: `Stan tidak ditemukan atau tidak aktif`
+            })
+        }
+
+        // simpan data stan ke request agar bisa dipakai controller
+        ;(req as any).stan = stan
+
+        next()
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            message: `Terjadi kesalahan pada server`
+        })
     }
-  });
-
-  if (!stan) {
-    return res.status(404).json({
-      message:  `Stan sudah dihapus`
-    });
-  }
-  // inject ke request supaya controller bisa pakai
-  ;(req as any).stan = stan
-
-  return next();
-  
-};
+}
 
 // CEK MENU MASIH ADA DAN MILIK ADMIN ITU SENDIRI
 const checkMenuActive = async (

@@ -18,9 +18,9 @@ const authentication = async (req: Request, res: Response) => {
         })
 
         if (!findUsers) {
-            return res.status(200)
+            return res.status(404)
                 .json({
-                    message: `username tidak ditemukan`
+                    message: `Username tidak ditemukan`
                 })
         }
 

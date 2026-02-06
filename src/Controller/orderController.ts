@@ -9,16 +9,6 @@ const createTransaksi = async (req: Request, res: Response) => {
         // cek user
         const user = (req as any).user
 
-        if (!user) {
-            return res.status(401).json({ message: `user tidak dikenal` })
-        }
-
-        if (user.role !== "siswa") {
-            return res.status(403).json({
-                message: `Hanya siswa yang dapat melakukan transaksi`
-            })
-        }
-
         /* mengambil data siswa*/
         const siswa = await prisma.siswa.findFirst({
             where: {
@@ -315,18 +305,6 @@ const readTransaksiSiswa = async (req: Request, res: Response) => {
 
         let tahun = Number(req.query.tahun)
 
-        if (!user) {
-            return res.status(401).json({
-                message: `Tidak dikenal`
-            })
-        }
-
-        if (user.role !== "siswa") {
-            return res.status(403).json({
-                message: `Hanya siswa yang dapat mengakses data ini`
-            })
-        }
-
         // mengambil data siswa 
         const siswa = await prisma.siswa.findFirst({
             where: {
@@ -466,18 +444,6 @@ const readTransaksiByBulanAdmin = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user
         const status = req.query.status as StatusType | undefined
-
-        if (!user) {
-            return res.status(401).json({
-                message: `Tidak dikenal`
-            })
-        }
-
-        if (user.role !== "admin_stan") {
-            return res.status(403).json({
-                message: `Hanya Admin yang dapat mengakses data ini`
-            })
-        }
 
         // untuk filter bulan dan tahun
         const bulan = Number(req.query.bulan) // 1 - 12

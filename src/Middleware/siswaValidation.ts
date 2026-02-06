@@ -45,7 +45,7 @@ const createSiswaValidation = async (
 /** buat a validasi untuk mengupdate siswa */
 const updateSiswaSchema = Joi.object({
     nama_siswa: Joi.string().min(3).optional(),
-    alamat: Joi.string().min(10).optional(),
+    alamat: Joi.string().min(5).optional(),
     telp: Joi.string().min(10).max(13).optional(),
     username: Joi.string().optional(),
     password: Joi.string().optional()
@@ -59,9 +59,9 @@ const updateSiswaValidation = (req: Request, res: Response, next: NextFunction):
             const fileName: string = req.file.filename;
             const pathFile = path.join(ROOT_DIRECTORY, "public", "foto-siswa", fileName);
 
-            /** check if file exists */
+            /**cek apa ada file terbaru*/
             if (fs.existsSync(pathFile)) {
-                /** delete file */
+                /** hapus file lama */
                 fs.unlinkSync(pathFile);
             }
         }

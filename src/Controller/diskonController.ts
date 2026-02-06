@@ -7,34 +7,8 @@ const prisma = new PrismaClient({ errorFormat: "minimal" })
 const createDiskon = async (req: Request, res: Response) => {
     try {
 
-        // validasi user dari middleware verifyToken
-        const user = (req as any).user
-        if (!user) {
-            return res.status(401).json({
-                message: `user tidak dikenal`
-            })
-        }
-
-        // Hanya admin stan yang bisa memasang diskon
-        if (user.role !== "admin_stan") {
-            return res.status(403).json({
-                message: `Hanya admin yang memiliki akses`
-            })
-        }
-
-        // cek stan aktif
-        const stan = await prisma.stan.findFirst({
-            where: {
-                id_user: user.id,
-                is_active: true
-            }
-        })
-
-        if (!stan) {
-            return res.status(400).json({
-                message: `Stan tidak ditemukan`
-            })
-        }
+        // ambil stan dari middleware verifyStanActive
+        const stan = (req as any).stan
 
         // ambil data request 
         const {
@@ -45,17 +19,18 @@ const createDiskon = async (req: Request, res: Response) => {
             menu_id
         } = req.body
 
-        // validasi tanggal
+        // validasi tanggal awal dan akhir
         const startDate = new Date(tanggal_awal)
         const endDate = new Date(tanggal_akhir)
+         endDate.setHours(23, 59, 59, 999)
 
         if (startDate >= endDate) {
             return res.status(400).json({
-                message: `tanggal tidak benar`
+                message: `Tanggal tidak benar`
             })
         }
 
-        // validasi diskon
+        // validasi persentase diskon
         if (persentase_diskon <= 0 || persentase_diskon >= 100) {
             return res.status(400).json({
                 message: `Persentase diskon tidak benar`
@@ -101,13 +76,14 @@ const createDiskon = async (req: Request, res: Response) => {
             })
         }
 
-        // create 
+        // create diskon
         const newDiskon = await prisma.diskon.create({
             data: {
                 nama_diskon,
                 persentase_diskon,
-                tanggal_awal: new Date(tanggal_awal),
-                tanggal_akhir: new Date(tanggal_akhir)
+                tanggal_awal: startDate,
+                tanggal_akhir: endDate
+                
             }
         })
 
@@ -140,33 +116,8 @@ const createDiskon = async (req: Request, res: Response) => {
 
 const readDiskon = async (req: Request, res: Response) => {
     try {
-        const user = (req as any).user
-
-        if (!user) {
-            return res.status(400).json({
-                message: `Tidak Dikenal`
-            })
-        }
-
-        if (user.role !== "admin_stan") {
-            return res.status(400).json({
-                message: `Hanya stan yang dapat mengakses`
-            })
-        }
-
-        // mengambil data stan
-        const stan = await prisma.stan.findFirst({
-            where: {
-                id_user: user.id,
-                is_active: true
-            }
-        })
-
-        if (!stan) {
-            return res.status(400).json({
-                message: `stan tidak ditemukan`
-            })
-        }
+        // ambil stan dari middleware verifyStanActive
+        const stan = (req as any).stan
 
         // ambil diskon yang ada di stan ini
         // some digunakan minimal 1 menu yang diskon di stan ini
@@ -233,7 +184,7 @@ const readDiskon = async (req: Request, res: Response) => {
 
 
         return res.status(200).json({
-            message: "Data diskon stan",
+            message: `Data diskon stan`,
             data: result
         })
 
@@ -249,19 +200,9 @@ const readDiskon = async (req: Request, res: Response) => {
 // UPDATE
 const updateDiskon = async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user
-    if (!user || user.role !== "admin_stan") {
-      return res.status(403).json({ message: `Akses ditolak` })
-    }
+     const stan = (req as any).stan
 
     const id_diskon = Number(req.params.id)
-
-    const stan = await prisma.stan.findFirst({
-      where: { id_user: user.id, is_active: true }
-    })
-    if (!stan) {
-      return res.status(404).json({ message: `Stan tidak ditemukan` })
-    }
 
     const diskon = await prisma.diskon.findFirst({
       where: {
@@ -288,13 +229,25 @@ const updateDiskon = async (req: Request, res: Response) => {
       menu_id
     } = req.body
 
+    // parsing tanggal awal jika ada
+        const newStartDate = tanggal_awal
+            ? new Date(tanggal_awal)
+            : undefined
+
+        // parsing tanggal akhir dan set ke akhir hari jika ada
+        let newEndDate: Date | undefined = undefined
+        if (tanggal_akhir) {
+            newEndDate = new Date(tanggal_akhir)
+            newEndDate.setHours(23, 59, 59, 999)
+        }
+
     await prisma.diskon.update({
       where: { id: id_diskon },
       data: {
         nama_diskon,
         persentase_diskon,
-        tanggal_awal: tanggal_awal ? new Date(tanggal_awal) : undefined,
-        tanggal_akhir: tanggal_akhir ? new Date(tanggal_akhir) : undefined
+        tanggal_awal: newStartDate,
+        tanggal_akhir: newEndDate
       }
     })
 
@@ -360,7 +313,7 @@ const updateDiskon = async (req: Request, res: Response) => {
     })
   } catch (err) {
     console.log(err)
-    return res.status(500).json({ message: "Terjadi kesalahan server" })
+    return res.status(500).json({ message: `Terjadi kesalahan server` })
   }
 }
 
@@ -369,17 +322,6 @@ const updateDiskon = async (req: Request, res: Response) => {
 const deleteDiskon = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user
-        if (!user) {
-            return res.status(401).json({
-                message: `Tidak dikenal`
-            })
-        }
-
-        if (user.role !== "admin_stan") {
-            return res.status(403).json({
-                message: `Hanya admin stan yang dapat mengakses`
-            })
-        }
 
         const id_diskon = Number(req.params.id)
 

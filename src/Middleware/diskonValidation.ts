@@ -42,9 +42,9 @@ const updateDiskonSchema = Joi.object({
         .less(100)
         .optional(),
 
-    tanggal_awal: Joi.date().timestamp().optional(),
+    tanggal_awal: Joi.date().optional(),
 
-    tanggal_akhir: Joi.date().timestamp().optional(),
+    tanggal_akhir: Joi.date().optional(),
 
     menu_id: Joi.array()
         .items(Joi.number())

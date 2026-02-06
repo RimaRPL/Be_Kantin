@@ -10,14 +10,6 @@ const cetakNota = async (req: Request, res: Response) => {
     const user = (req as any).user
     const transaksiId = Number(req.params.id)
 
-    if (!user) {
-      return res.status(401).json({ message: "Tidak dikenal" })
-    }
-
-    if (user.role !== "siswa") {
-      return res.status(403).json({ message: "Siswa yang berhak cetak nota" })
-    }
-
     const siswa = await prisma.siswa.findFirst({
       where: {
         id_user: user.id,
@@ -26,7 +18,7 @@ const cetakNota = async (req: Request, res: Response) => {
     })
 
     if (!siswa) {
-      return res.status(404).json({ message: "Siswa tidak ditemukan" })
+      return res.status(404).json({ message: `Siswa tidak ditemukan` })
     }
 
     const transaksi = await prisma.transaksi.findFirst({
@@ -50,7 +42,7 @@ const cetakNota = async (req: Request, res: Response) => {
     })
 
     if (!transaksi) {
-      return res.status(404).json({ message: "Transaksi tidak ada" })
+      return res.status(404).json({ message: `Transaksi tidak ada` })
     }
 
     const items = transaksi.detail_transaksi.map(item => {
@@ -83,7 +75,7 @@ const cetakNota = async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error(error)
-    return res.status(500).json({ message: "Terjadi kesalahan pada server" })
+    return res.status(500).json({ message: `Terjadi kesalahan pada server` })
   }
 }
 
