@@ -52,17 +52,14 @@ const createAdminStan = async (req: Request, res: Response) => {
 // READ 
 const readAdminStan = async (req: Request, res: Response) => {
     try {
-        const search =
-            typeof req.query.search === "string"
-                ? req.query.search
-                : ""
 
-        const allStan = await prisma.stan.findMany({
+        const user = (req as any).user
+
+        const Stan = await prisma.stan.findMany({
             where: {
-                nama_stan: {
-                    contains: search
-                },
-                deleted_at: null
+                id_user: user.id,
+                deleted_at: null,
+                is_active: true
             },
             include: {
                 users_detail: {
@@ -74,9 +71,16 @@ const readAdminStan = async (req: Request, res: Response) => {
                 }
             }
         })
+
+        if (!Stan) {
+            return res.status(404).json({
+                message: `Stan tidak ditemukan`
+            })
+        }
+
         return res.status(200).json({
             message: `Stan telah ditampilkan`,
-            data: allStan
+            data: Stan
         })
     } catch (error) {
         console.log(error)
@@ -88,12 +92,16 @@ const readAdminStan = async (req: Request, res: Response) => {
 // UPDATE 
 const updateAdminStan = async (req: Request, res: Response) => {
     try {
-        // membaca id dari url param
-        const id = req.params.id
+
+        const user = (req as any).user
 
         // mengecek apakah ada stan
         const findStan = await prisma.stan.findFirst({
-            where: { id: Number(id) },
+            where: {
+                id_user: user.id, 
+                deleted_at: null,
+                is_active: true
+            },
             include: {
                 users_detail: true
             }
@@ -130,7 +138,7 @@ const updateAdminStan = async (req: Request, res: Response) => {
         }
 
         const saveStan = await prisma.stan.update({
-            where: { id: Number(id) },
+            where: { id: findStan.id },
             data: {
                 nama_stan: nama_stan ? nama_stan : findStan.nama_stan,
                 nama_pemilik: nama_pemilik ? nama_pemilik : findStan.nama_pemilik,
@@ -143,7 +151,19 @@ const updateAdminStan = async (req: Request, res: Response) => {
                 }
 
             },
-            include: { users_detail: true }
+            select: {
+                id: true,
+                nama_stan: true,
+                nama_pemilik: true,
+                telp: true,
+                users_detail: {
+                    select: {
+                        id: true,
+                        username: true,
+                        role: true
+                    }
+                }
+            }
         })
 
         return res.status(200).json({
@@ -160,10 +180,11 @@ const updateAdminStan = async (req: Request, res: Response) => {
 // DELETE
 const deleteAdminStan = async (req: Request, res: Response) => {
     try {
-       
-        const id = Number(req.params.id)
+
+       const user = (req as any).user
+
         const Stan = await prisma.stan.findFirst({
-            where: { id, deleted_at: null }, include: {
+            where: { id_user: user.id, deleted_at: null }, include: {
                 users_detail: true
             }
         })
@@ -176,7 +197,7 @@ const deleteAdminStan = async (req: Request, res: Response) => {
 
         // soft delete siswa
         await prisma.stan.update({
-            where: { id },
+            where: { id: Stan.id },
             data: {
                 is_active: false,
                 deleted_at: new Date()

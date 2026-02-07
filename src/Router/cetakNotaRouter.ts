@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { verifyToken, verifySiswa } from "../Middleware/authorization";
 import { cetakNota } from "../Controller/cetakNotaController";
+import { verifyToken } from "../Middleware/auth/verifyToken";
+import { verifySiswa } from "../Middleware/auth/verifyRole";
 
 const router = Router()
 

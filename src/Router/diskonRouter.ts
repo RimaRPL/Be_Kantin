@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { verifyAdmin, verifyToken } from "../Middleware/authorization";
 import { createDiskon, deleteDiskon, readDiskon, updateDiskon } from "../Controller/diskonController";
 import { createDiskonValidation, updateDiskonValidation } from "../Middleware/diskonValidation";
-import { checkStanActive } from "../Middleware/menuValidation";
+import { verifyToken } from "../Middleware/auth/verifyToken";
+import { verifyAdmin } from "../Middleware/auth/verifyRole";
+import { checkStanActive } from "../Middleware/adminStanValidation";
 
 const router = Router()
 

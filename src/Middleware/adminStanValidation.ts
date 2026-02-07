@@ -1,5 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import Joi from "joi";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient()
 
 // CREATE 
 const createAdminSchema = Joi.object ({
@@ -41,4 +44,38 @@ const updateStanValidation = (req: Request, res: Response, next: NextFunction) =
     return next()
 }
 
-export { createAdminValidation, updateStanValidation}
+// CEK stan active
+const checkStanActive = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        // ambil user dari middleware verifyToken
+        const user = (req as any).user
+
+        // cari stan milik user yang masih aktif
+        const stan = await prisma.stan.findFirst({
+            where: {
+                id_user: user.id,
+                is_active: true,
+                deleted_at: null
+            }
+        })
+
+        // jika stan tidak ditemukan atau tidak aktif
+        if (!stan) {
+            return res.status(400).json({
+                message: `Stan tidak ditemukan atau tidak aktif`
+            })
+        }
+
+        // simpan data stan ke request agar bisa dipakai controller
+        ; (req as any).stan = stan
+
+        next()
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            message: `Terjadi kesalahan pada server`
+        })
+    }
+}
+
+export { createAdminValidation, updateStanValidation, checkStanActive}

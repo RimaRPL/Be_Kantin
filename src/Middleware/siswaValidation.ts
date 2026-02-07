@@ -14,8 +14,8 @@ const createSiswaSchema = Joi.object({
     nama_siswa: Joi.string().min(3).required(),
     alamat: Joi.string().min(5).required(),
     telp: Joi.string().min(10).max(13).required(),
-    username: Joi.string().required(),
-    password: Joi.string().required()
+    username: Joi.string().min(3).required(),
+    password: Joi.string().min(8).required()
 })
 
 const createSiswaValidation = async (
@@ -87,7 +87,8 @@ const checkSiswaActive = async (
     const siswa = await prisma.siswa.findFirst({
         where: {
             id,
-            deleted_at:null
+            deleted_at:null,
+            is_active: true
         }
     })
 

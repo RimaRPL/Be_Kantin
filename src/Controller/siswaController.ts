@@ -27,7 +27,7 @@ const createSiswa = async (req: Request, res: Response) => {
         }
 
         const hashPassword = await bcrypt.hash(password, 12)
-        
+
         //menyimpan di db
         const newSiswa = await prisma.users.create({
             data: {
@@ -59,19 +59,55 @@ const createSiswa = async (req: Request, res: Response) => {
 // READ
 const readSiswa = async (req: Request, res: Response) => {
     try {
+        const user = (req as any).user
+
+        if (user.role === "siswa") {
+            const siswa = await prisma.siswa.findFirst({
+                where: {
+                    id_user: user.id,
+                    deleted_at: null
+                },
+                select: {
+                    id: true,
+                    nama_siswa: true,
+                    alamat: true,
+                    telp: true,
+                    foto: true,
+                    users_detail: {
+                        select: {
+                            id: true,
+                            username: true,
+                            role: true
+                        }
+                    }
+                }
+            })
+
+            if (!siswa) {
+                return res.status(404).json({ message: `Data siswa tidak ditemukan` })
+            }
+
+            return res.status(200).json({
+                message: `Data siswa berhasil ditampilkan`,
+                data: siswa
+            })
+        }
+
+        //ini untuk read siswa bagian admin
         const search =
-            typeof req.query.search === "string"
-                ? req.query.search
-                : ""
+            typeof req.query.search === "string" ? req.query.search : ""
 
         const allSiswa = await prisma.siswa.findMany({
             where: {
-                nama_siswa: {
-                    contains: search
-                },
+                nama_siswa: { contains: search },
                 deleted_at: null
             },
-            include: {
+            select: {
+                id: true,
+                nama_siswa: true,
+                alamat: true,
+                telp: true,
+                foto: true,
                 users_detail: {
                     select: {
                         id: true,
@@ -83,27 +119,30 @@ const readSiswa = async (req: Request, res: Response) => {
         })
 
         return res.status(200).json({
-            message: `Siswa telah ditampilkan`,
+            message: `Data siswa berhasil ditampilkan`,
+            total_data: allSiswa.length,
             data: allSiswa
         })
 
     } catch (error) {
-        console.log(error)
-        res.status(500).json(error)
+        console.error(error)
+        return res.status(500).json({ message: `Terjadi kesalahan server` })
     }
 }
 
-// UPDATE
-const updateSiswa = async (req: Request, res: Response) => {
+
+// UPDATE by admin
+const updateSiswabyId = async (req: Request, res: Response) => {
     try {
         // membaca id dari url param
         const id = req.params.id
 
         // mengecek apakah ada siswa
         const findSiswa = await prisma.siswa.findFirst({
-            where: { id: Number(id),
+            where: {
+                id: Number(id),
                 deleted_at: null
-             },
+            },
             include: {
                 users_detail: true
             }
@@ -172,7 +211,20 @@ const updateSiswa = async (req: Request, res: Response) => {
                 }
 
             },
-            include: { users_detail: true }
+            select: {
+                id: true,
+                nama_siswa: true,
+                alamat: true,
+                telp: true,
+                foto: true,
+                users_detail: {
+                    select: {
+                        id: true,
+                        username: true,
+                        role: true
+                    }
+                }
+            }
         })
 
         return res.status(200).json({
@@ -185,6 +237,95 @@ const updateSiswa = async (req: Request, res: Response) => {
         return res.status(500).json(error)
     }
 }
+
+//update by siswa 
+const updateSiswa = async (req: Request, res: Response) => {
+    try {
+        const user = (req as any).user
+
+        const siswa = await prisma.siswa.findFirst({
+            where: {
+                id_user: user.id,
+                deleted_at: null
+            },
+            include: {
+                users_detail: true
+            }
+        })
+
+        if (!siswa) {
+            return res.status(404).json({
+                message: `Data siswa tidak ditemukan`
+            })
+        }
+
+        // hapus foto lama
+        if (req.file && siswa.foto) {
+            const pathFile = `${ROOT_DIRECTORY}/public/foto-siswa/${siswa.foto}`
+            if (fs.existsSync(pathFile)) fs.unlinkSync(pathFile)
+        }
+
+        const { nama_siswa, alamat, telp, username, password } = req.body
+
+        if (username && username !== siswa.users_detail.username) {
+            const cekUsername = await prisma.users.findFirst({
+                where: { username }
+            })
+
+            if (cekUsername) {
+                return res.status(409).json({
+                    message: "Username sudah digunakan"
+                })
+            }
+        }
+
+        let newPassword = siswa.users_detail.password
+        if (password) {
+            newPassword = await bcrypt.hash(password, 12)
+        }
+
+        const result = await prisma.siswa.update({
+            where: { id: siswa.id },
+            data: {
+                nama_siswa: nama_siswa ?? siswa.nama_siswa,
+                alamat: alamat ?? siswa.alamat,
+                telp: telp ?? siswa.telp,
+                foto: req.file ? req.file.filename : siswa.foto,
+                users_detail: {
+                    update: {
+                        username: username ?? siswa.users_detail.username,
+                        password: newPassword
+                    }
+                }
+            }, select: {
+                id: true,
+                nama_siswa: true,
+                alamat: true,
+                telp: true,
+                foto: true,
+                users_detail: {
+                    select: {
+                        id: true,
+                        username: true,
+                        role: true
+                    }
+                }
+            }
+        })
+
+        return res.status(200).json({
+            message: `Data siswa berhasil diperbarui`,
+            data: result
+        })
+
+    } catch (error) {
+        console.error(error)
+        return res.status(500).json({
+            message: `Terjadi kesalahan server`
+        })
+    }
+}
+
 
 // DELETE
 const deleteSiswa = async (req: Request, res: Response) => {
@@ -236,4 +377,4 @@ const deleteSiswa = async (req: Request, res: Response) => {
     }
 }
 
-export { createSiswa, readSiswa, updateSiswa, deleteSiswa }
+export { createSiswa, readSiswa, updateSiswabyId, updateSiswa, deleteSiswa }

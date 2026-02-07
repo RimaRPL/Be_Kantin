@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { verifyToken, verifyAdmin, verifySiswa } from "../Middleware/authorization";
 import { createTransaksiValidation } from "../Middleware/orderValidation";
 import { createTransaksi, masakStatus, antarStatus, sampaiStatus, readTransaksiSiswa, readTransaksiByBulanAdmin } from "../Controller/orderController";
+import { verifyToken } from "../Middleware/auth/verifyToken";
+import { verifyAdmin, verifySiswa } from "../Middleware/auth/verifyRole";
 
 const router = Router()
 

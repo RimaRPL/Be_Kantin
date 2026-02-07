@@ -1,8 +1,10 @@
 import { Router } from "express";
-import { verifyAdmin, verifyToken } from "../Middleware/authorization";
-import { checkMenuActive, checkStanActive, createMenuValidation, updateMenuValidation } from "../Middleware/menuValidation";
-import { createMenu, deleteMenu, getMenuById, readMenu, updateMenu } from "../Controller/menuController";
+import { checkMenuActive, createMenuValidation, updateMenuValidation } from "../Middleware/menuValidation";
+import { createMenu, deleteMenu, getMenuById, readMenu, readMenuAdmin, updateMenu } from "../Controller/menuController";
 import { uploadMenuFoto } from "../Middleware/uploadMenuFoto";
+import { verifyToken } from "../Middleware/auth/verifyToken";
+import { verifyAdmin } from "../Middleware/auth/verifyRole";
+import { checkStanActive } from "../Middleware/adminStanValidation";
 
 const router = Router()
 
@@ -10,7 +12,7 @@ const router = Router()
 router.post(`/`, [verifyToken, verifyAdmin, checkStanActive, uploadMenuFoto.single("foto"), createMenuValidation], createMenu)
 
 // router get all menu
-router.get(`/`, [verifyToken], readMenu)
+router.get(`/all`, [verifyToken], readMenu)
 // bisa filter 
 /**
  * /menu?stan= id_stan => untuk melihat menu di stan itu
@@ -20,6 +22,9 @@ router.get(`/`, [verifyToken], readMenu)
 
 // router get menu by id
 router.get(`/:id`, [verifyToken], getMenuById)
+
+//router get menu by admin
+router.get(`/`, [verifyToken, verifyAdmin, checkStanActive], readMenuAdmin)
 
 // router update
 router.put(

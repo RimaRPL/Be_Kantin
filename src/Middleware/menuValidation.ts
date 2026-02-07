@@ -77,74 +77,41 @@ const updateMenuValidation = (req: Request, res: Response, next: NextFunction): 
     return next()
 }
 
-
-// CEK stan active
-const checkStanActive = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        // ambil user dari middleware verifyToken
-        const user = (req as any).user
-
-        // cari stan milik user yang masih aktif
-        const stan = await prisma.stan.findFirst({
-            where: {
-                id_user: user.id,
-                is_active: true
-            }
-        })
-
-        // jika stan tidak ditemukan atau tidak aktif
-        if (!stan) {
-            return res.status(400).json({
-                message: `Stan tidak ditemukan atau tidak aktif`
-            })
-        }
-
-        // simpan data stan ke request agar bisa dipakai controller
-        ;(req as any).stan = stan
-
-        next()
-    } catch (error) {
-        console.log(error)
-        return res.status(500).json({
-            message: `Terjadi kesalahan pada server`
-        })
-    }
-}
-
 // CEK MENU MASIH ADA DAN MILIK ADMIN ITU SENDIRI
 const checkMenuActive = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
+    req: Request,
+    res: Response,
+    next: NextFunction
 ) => {
-  const user = (req as any).user
-  const menuId = Number(req.params.id)
+    const user = (req as any).user
+    const menuId = Number(req.params.id)
 
-  const menu = await prisma.menu.findFirst({
-    where: {
-      id: menuId,
-      is_active: true,
-      stan_detail: {
-        id_user: user.id
-      }
-    },
-    include: {
-      stan_detail: true
-    }
-  })
-
-  if (!menu) {
-    return res.status(403).json({
-      message: `Menu tidak ditemukan atau bukan milik Anda`
+    const menu = await prisma.menu.findFirst({
+        where: {
+            id: menuId,
+            is_active: true,
+            stan_detail: {
+                id_user: user.id,
+                is_active: true,
+                deleted_at: null
+            }
+        },
+        include: {
+            stan_detail: true
+        }
     })
-  }
 
-  // inject supaya controller tidak query ulang
-  ;(req as any).menu = menu
+    if (!menu) {
+        return res.status(403).json({
+            message: `Menu tidak ditemukan atau bukan milik Anda`
+        })
+    }
 
-  return next()
+    // inject supaya controller tidak query ulang
+    ; (req as any).menu = menu
+
+    return next()
 }
 
-
-export { createMenuValidation, updateMenuValidation, checkStanActive, checkMenuActive }
+export { createMenuValidation, updateMenuValidation, checkMenuActive }
 
