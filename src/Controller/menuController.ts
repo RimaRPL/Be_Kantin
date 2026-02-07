@@ -68,28 +68,60 @@ const readMenu = async (req: Request, res: Response) => {
     const search = req.query.search?.toString() ?? "";
     const jenis = req.query.jenis as "makanan" | "minuman" | undefined;
     const stanId = req.query.stan ? Number(req.query.stan) : undefined;
+    const diskon = req.query.diskon === "ada" ? true : req.query.diskon === "tidak" ? false : undefined;
     const today = new Date();
 
     const allMenu = await prisma.menu.findMany({
       where: {
         is_active: true,
-        nama_makanan: {
-          contains: search,
-        },
+        //filter by jenis
         ...(jenis && { jenis }),
+        //filter by stan
         ...(stanId && { id_stan: stanId }),
         stan_detail: {
-          deleted_at: null,
           is_active: true,
+          deleted_at: null,
         },
+        // filter by diskon = ada / tidak
+        ...(diskon === true && {
+          menu_diskonDetail: {
+            some: {
+              diskon_detail: {
+                tanggal_awal: {lte: today},
+                tanggal_akhir: {gte: today},
+              },
+            },
+          },
+        }),
+        ...(diskon === false && {
+          menu_diskonDetail: {
+            none: {
+              diskon_detail: {
+                tanggal_awal: {lte: today},
+                tanggal_akhir: {gte: today},
+              },
+            },
+          },
+        }),
+        // Search by nama menu OR nama stan
+        ...(search && {
+          OR: [
+            {
+              nama_makanan: { contains: search },
+            },
+            {
+              stan_detail: {
+                nama_stan: { contains: search },
+              },
+            },
+          ],
+        }),
       },
       include: {
         stan_detail: {
           select: {
             id: true,
             nama_stan: true,
-            nama_pemilik: true,
-            telp: true
           },
         },
         menu_diskonDetail: {
@@ -147,14 +179,14 @@ const readMenu = async (req: Request, res: Response) => {
     });
 
     return res.status(200).json({
-      message: "Menu telah ditampilkan",
+      message: `Menu telah ditampilkan`,
       total_data: result.length,
       data: result,
     });
   } catch (error) {
     console.error(error);
     return res.status(500).json({
-      message: "Terjadi kesalahan pada server",
+      message:  `Terjadi kesalahan pada server`,
     });
   }
 };
@@ -164,12 +196,6 @@ const getMenuById = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id)
     const today = new Date()
-
-    if (isNaN(id)) {
-      return res.status(400).json({
-        message: `ID menu tidak valid`
-      })
-    }
 
     const menu = await prisma.menu.findFirst({
       where: {
@@ -184,7 +210,9 @@ const getMenuById = async (req: Request, res: Response) => {
         stan_detail: {
           select: {
             id: true,
-            nama_stan: true
+            nama_stan: true,
+            nama_pemilik: true,
+            telp: true
           }
         },
         menu_diskonDetail: {
@@ -223,7 +251,7 @@ const getMenuById = async (req: Request, res: Response) => {
         : harga_awal
 
     return res.status(200).json({
-      message: "Detail menu",
+      message: `Detail menu`,
       data: {
         id: menu.id,
         nama_makanan: menu.nama_makanan,
@@ -248,20 +276,44 @@ const getMenuById = async (req: Request, res: Response) => {
   }
 }
 
-//READ MENU ADMIN 
+// READ MENU ADMIN 
 const readMenuAdmin = async (req: Request, res: Response) => {
   try {
-    const stan = (req as any).stan
-
-    const search = req.query.search?.toString() ?? ""
-    const jenis = req.query.jenis as "makanan" | "minuman" | undefined
-    const today = new Date()
+    const stan = (req as any).stan;
+    const search = req.query.search?.toString() ?? "";
+    const jenis = req.query.jenis as "makanan" | "minuman" | undefined;
+    const status = req.query.status?.toString(); // "aktif" | "nonaktif"
+    const diskon = req.query.diskon?.toString(); // "ada" | "tidak"
+    
+    const today = new Date();
 
     const menus = await prisma.menu.findMany({
       where: {
         id_stan: stan.id,
         nama_makanan: { contains: search },
         ...(jenis && { jenis }),
+        ...(status === "aktif" && { is_active: true }),
+        ...(status === "nonaktif" && { is_active: false }),
+        ...(diskon=== "ada" && {
+          menu_diskonDetail: {
+            some: {
+              diskon_detail: {
+                tanggal_awal: { lte: today },
+                tanggal_akhir: { gte: today },
+              },
+            },
+          },
+        }),
+        ...(diskon === "tidak" && {
+          menu_diskonDetail: {
+            none: {
+              diskon_detail: {
+                tanggal_awal: { lte: today },
+                tanggal_akhir: { gte: today },
+              },
+            },
+          },
+        }),
       },
       include: {
         menu_diskonDetail: {
@@ -281,17 +333,20 @@ const readMenuAdmin = async (req: Request, res: Response) => {
           },
         },
       },
-    })
+      orderBy: {
+        id: 'desc' 
+      }
+    });
 
     const result = menus.map(menu => {
-      const harga_awal = menu.harga
-      const diskon = menu.menu_diskonDetail[0]?.diskon_detail
-      const persentase_diskon = diskon?.persentase_diskon ?? 0
+      const harga_awal = menu.harga;
+      const diskon = menu.menu_diskonDetail[0]?.diskon_detail;
+      const persentase_diskon = diskon?.persentase_diskon ?? 0;
 
       const harga_setelah_diskon =
         persentase_diskon > 0
           ? Math.round(harga_awal - (harga_awal * persentase_diskon) / 100)
-          : harga_awal
+          : harga_awal;
 
       return {
         id: menu.id,
@@ -299,24 +354,26 @@ const readMenuAdmin = async (req: Request, res: Response) => {
         jenis: menu.jenis,
         harga_awal,
         harga_setelah_diskon,
-        diskon_detail: diskon ?? null,
+        diskon_detail: diskon ? {
+          nama_diskon: diskon.nama_diskon,
+          persentase_diskon: diskon.persentase_diskon
+        } : null,
         is_active: menu.is_active,
-      }
-    })
+      };
+    });
 
     return res.status(200).json({
       message: `Menu admin berhasil ditampilkan`,
       total_data: result.length,
       data: result,
-    })
+    });
   } catch (error) {
-    console.error(error)
+    console.error(error);
     return res.status(500).json({
       message: `Terjadi kesalahan pada server`,
-    })
+    });
   }
-}
-
+};
 
 // UPDATE
 const updateMenu = async (req: Request, res: Response) => {
@@ -389,6 +446,5 @@ const deleteMenu = async (req: Request, res: Response) => {
 
   }
 }
-
 
 export { createMenu, readMenu, getMenuById, updateMenu, deleteMenu, readMenuAdmin }

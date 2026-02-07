@@ -194,65 +194,41 @@ const updateStatusTransaksi = async (
     successMessage: string
 ) => {
     try {
-        const userId = (req as any).user.id
+        const stan = (req as any).stan
         const transaksiId = Number(req.params.id)
 
-        // 1. Ambil transaksi
+        // memastikan transaksi milik stan ini
         const transaksi = await prisma.transaksi.findUnique({
             where: { id: transaksiId }
         })
 
-        if (!transaksi) {
+        if (!transaksi || transaksi.id_stan !== stan.id) {
             return res.status(404).json({
-                message: `Transaksi tidak ditemukan`
+                message: `Transaksi tidak ditemukan atau bukan milik stan Anda`
             })
         }
 
-        // stan
-        const stan = await prisma.stan.findFirst({
-            where: {
-                id: transaksi.id_stan,
-                id_user: userId,
-                is_active: true
-            }
-        })
-
-        if (!stan) {
-            return res.status(403).json({
-                message: `Anda tidak memiliki akses`
-            })
-        }
-
-        // 3. Validasi status
+        // memvalidasi status (PrevStatus check)
         if (transaksi.status !== prevStatus) {
             return res.status(400).json({
-                message: `Transaksi tidak bisa diproses`
+                message: `Gagal: Status saat ini adalah ${transaksi.status}, tidak bisa diubah ke ${nextStatus}`
             })
         }
 
-        // 4. Update status
+        // Update status
         const updatedStatusTransaksi = await prisma.transaksi.update({
             where: { id: transaksiId },
             data: { status: nextStatus },
             include: {
-                siswa_detail: {
-                    select: {
-                        nama_siswa: true
-                    }
-                },
+                siswa_detail: { select: { nama_siswa: true } },
                 detail_transaksi: {
                     select: {
                         qty: true,
-                        menu_detail: {
-                            select: {
-                                nama_makanan: true
-                            }
-                        }
+                        menu_detail: { select: { nama_makanan: true } }
                     }
                 }
             }
         })
-
 
         return res.status(200).json({
             message: successMessage,
@@ -261,7 +237,7 @@ const updateStatusTransaksi = async (
 
     } catch (error) {
         console.log(error)
-        return res.status(500).json(error)
+        return res.status(500).json({ message: "Terjadi kesalahan server" })
     }
 }
 
@@ -419,7 +395,7 @@ const readTransaksiSiswa = async (req: Request, res: Response) => {
                     nama_stan: trx.stan_detail.nama_stan,
                     pemilik: trx.stan_detail.nama_pemilik
                 },
-                items: detail,
+                detail: detail,
                 total_harga
             }
         })
@@ -442,7 +418,7 @@ const readTransaksiSiswa = async (req: Request, res: Response) => {
 // READ UNTUK ADMIN ( DIFILTER BERDASARKAN BULAN)
 const readTransaksiByBulanAdmin = async (req: Request, res: Response) => {
     try {
-        const user = (req as any).user
+        const stan = (req as any).stan
         const status = req.query.status as StatusType | undefined
 
         // untuk filter bulan dan tahun
@@ -452,20 +428,6 @@ const readTransaksiByBulanAdmin = async (req: Request, res: Response) => {
         if (!bulan || !tahun) {
             return res.status(400).json({
                 message: `Bulan dan tahun wajib diisi`
-            })
-        }
-
-        // ambil stan milik admin
-        const stan = await prisma.stan.findFirst({
-            where: {
-                id_user: user.id,
-                is_active: true
-            }
-        })
-
-        if (!stan) {
-            return res.status(404).json({
-                message: `Stan tidak ditemukan`
             })
         }
 
@@ -513,7 +475,6 @@ const readTransaksiByBulanAdmin = async (req: Request, res: Response) => {
                 }
             }
         })
-
 
         const data = transaksi.map(trx => {
             let total_harga = 0

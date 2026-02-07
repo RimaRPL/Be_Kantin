@@ -8,19 +8,7 @@ const rekapPemasukanBulanan = async (
     req: Request, res: Response
 ) => {
     try {
-        const user = (req as any).user
-
-        if (!user) {
-            return res.status(401).json({
-                message: `Tidak dikenal`
-            })
-        }
-
-        if (user.role !== "admin_stan") {
-            return res.status(403).json({
-                message: `Hanya admin stan yang dapat mengakses ini`
-            })
-        }
+        const stan = (req as any).stan
 
         // ini untuk bulan dan tahun
         const bulan = Number(req.query.bulan) // 1 - 12
@@ -29,20 +17,6 @@ const rekapPemasukanBulanan = async (
         if (!bulan || bulan < 1 || bulan > 12 || !tahun) {
             return res.status(400).json({
                 message: `Bulan dan tahun wajib diisi`
-            })
-        }
-
-        // ambil stan milik admin
-        const stan = await prisma.stan.findFirst({
-            where: {
-                id_user: user.id,
-                is_active: true
-            }
-        })
-
-        if (!stan) {
-            return res.status(404).json({
-                message: `Stan tidak ditemukan`
             })
         }
 

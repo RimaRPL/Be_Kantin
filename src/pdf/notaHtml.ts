@@ -13,27 +13,24 @@ export const notaHtml = (data: {
     subtotal: number
   }[]
 }) => {
+  //mengubah format
   const formatRp = (n: number) =>
     "Rp" + n.toLocaleString("id-ID")
 
   const rows = data.items.map(item => `
-    <tr>
-      <td class="menu">
-        <div class="menu-name">${item.namaMenu}</div>
-        ${
-          item.persentase_diskon > 0
-            ? `<div class="price-note">
-                <span class="old">${formatRp(item.harga_awal)}</span>
-                → <strong>${formatRp(item.harga_beli)}</strong>
-                (Diskon ${item.persentase_diskon}%)
-              </div>`
-            : `<div class="price-note">
-                ${formatRp(item.harga_beli)}
-              </div>`
+    <tr class="item-row">
+      <td colspan="3" class="menu-name">${item.namaMenu}</td>
+    </tr>
+    <tr class="detail-row">
+      <td class="price-col">
+        ${item.persentase_diskon > 0 
+          ? `<span class="old-price">${formatRp(item.harga_awal)}</span> <span class="disc-tag">OFF${item.persentase_diskon}%</span><br>` 
+          : ''
         }
+        <span class="actual-price">${formatRp(item.harga_beli)}</span>
       </td>
-      <td class="qty">${item.qty}x</td>
-      <td class="price">${formatRp(item.subtotal)}</td>
+      <td class="qty-col">x${item.qty}</td>
+      <td class="subtotal-col">${formatRp(item.subtotal)}</td>
     </tr>
   `).join("")
 
@@ -48,107 +45,111 @@ export const notaHtml = (data: {
   body {
     width: 58mm;
     margin: 0;
-    padding: 6px;
-    font-family: monospace;
-    font-size: 11px;
+    padding: 2mm;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    line-height: 1.4;
     color: #000;
   }
 
   .center { text-align: center; }
+  .bold { font-weight: bold; }
 
   .title {
-    font-size: 13px;
+    font-size: 18px;
     font-weight: bold;
-    letter-spacing: 0.5px;
-  }
-
-  .subtitle {
-    font-size: 10px;
-    margin-top: 2px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
   }
 
   hr {
     border: none;
     border-top: 1px dashed #000;
-    margin: 6px 0;
+    margin: 8px 0;
   }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
+  /* Layout Header Kiri-Kanan */
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-bottom: 3px;
   }
 
-  th {
-    font-size: 10px;
-    text-align: left;
-    border-bottom: 1px solid #000;
-    padding-bottom: 3px;
-  }
-
-  td {
-    padding: 4px 0;
-    vertical-align: top;
-  }
-
-  .menu { width: 60%; }
-  .qty {
-    width: 10%;
-    text-align: center;
-  }
-  .price {
-    width: 30%;
-    text-align: right;
-  }
+  /* Tabel Item */
+  table { width: 100%; border-collapse: collapse; }
 
   .menu-name {
     font-weight: bold;
+    padding-top: 10px;
+    font-size: 13px;
   }
 
-  .price-note {
-    font-size: 9px;
-    color: #444;
-  }
+  .price-col { width: 45%; vertical-align: bottom; }
+  .qty-col { width: 15%; text-align: center; vertical-align: bottom; }
+  .subtotal-col { width: 40%; text-align: right; vertical-align: bottom; font-weight: bold; }
 
-  .old {
+  /* Style Diskon */
+  .old-price {
+    font-size: 10px;
     text-decoration: line-through;
-    opacity: 0.7;
+    color: #686868;
+  }
+  .disc-tag {
+    font-size: 10px;
+  }
+  .actual-price {
+    font-size: 12px;
   }
 
-  .summary {
-    font-size: 12px;
-    font-weight: bold;
-    text-align: right;
+  /* Bagian Total */
+  .total-section {
+    margin-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 16px;
+    border-top: 1px solid #000;
+    padding-top: 5px;
   }
 
   .footer {
-    margin-top: 8px;
-    font-size: 9px;
+    margin-top: 25px;
     text-align: center;
-    letter-spacing: 0.3px;
+    font-size: 11px;
+    padding-bottom: 10mm;
   }
 </style>
 </head>
-
 <body>
 
   <div class="center">
     <div class="title">${data.namaStan}</div>
-    <div class="subtitle">Pelanggan: ${data.namaSiswa}</div>
+    <div style="font-size: 12px;">Pelanggan: ${data.namaSiswa}</div>
   </div>
 
   <hr/>
 
-  ID: #${data.orderId}<br/>
-  tanggal: ${data.tanggal} - jam: ${data.jam}
+  <div class="info-row">
+    <span>Order ID</span>
+    <span class="bold">#${data.orderId}</span>
+  </div>
+  <div class="info-row">
+    <span>Tanggal</span>
+    <span>${data.tanggal}</span>
+  </div>
+  <div class="info-row">
+    <span>Jam</span>
+    <span>${data.jam}</span>
+  </div>
 
   <hr/>
 
   <table>
     <thead>
-      <tr>
-        <th>Menu</th>
-        <th class="qty">Qty</th>
-        <th class="price">Total</th>
+      <tr style="border-bottom: 1px solid #000; font-size: 10px;">
+        <th align="left">MENU</th>
+        <th align="center">QTY</th>
+        <th align="right">SUBTOTAL</th>
       </tr>
     </thead>
     <tbody>
@@ -156,14 +157,14 @@ export const notaHtml = (data: {
     </tbody>
   </table>
 
-  <hr/>
-
-  <div class="summary">
-    TOTAL ${formatRp(total)}
+  <div class="total-section bold">
+    <span>TOTAL</span>
+    <span>${formatRp(total)}</span>
   </div>
 
   <div class="footer">
-    Terima kasih
+    *** TERIMA KASIH ***<br>
+    Silahkan Tunggu Pesanan Anda
   </div>
 
 </body>

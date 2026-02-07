@@ -96,9 +96,24 @@ const createDiskon = async (req: Request, res: Response) => {
 const readDiskon = async (req: Request, res: Response) => {
     try {
         const stan = (req as any).stan
+        const search = req.query.search?.toString() ?? ""
+        const status = req.query.status?.toString()
+        const now = new Date()
 
         const diskon = await prisma.diskon.findMany({
             where: {
+                nama_diskon: { contains: search },
+                // Filter status waktu 
+                ...(status === "aktif" && {
+                    tanggal_awal: { lte: now },
+                    tanggal_akhir: { gte: now },
+                }),
+                ...(status === "akan datang" && {
+                    tanggal_awal: { gt: now },
+                }),
+                ...(status === "sudah hangus" && {
+                    tanggal_akhir: { lt: now },
+                }),
                 menu_diskonDetail: {
                     some: {
                         menu_detail: { id_stan: stan.id }
@@ -108,24 +123,18 @@ const readDiskon = async (req: Request, res: Response) => {
             include: {
                 menu_diskonDetail: {
                     include: {
-                        menu_detail: {
-                            select: {
-                                id: true,
-                                nama_makanan: true,
-                                harga: true
-                            }
-                        }
+                        menu_detail: true 
                     }
                 }
-            }
+            },
+            orderBy: { tanggal_awal: 'desc' }
         })
 
-        const now = new Date()
-
         const result = diskon.map(d => {
-            let status = "sudah hangus"
-            if (now < d.tanggal_awal) status = "akan datang"
-            else if (now <= d.tanggal_akhir) status = "aktif"
+            // status
+            let labelStatus = "sudah hangus"
+            if (now < d.tanggal_awal) labelStatus = "akan datang"
+            else if (now <= d.tanggal_akhir) labelStatus = "aktif"
 
             const menu = d.menu_diskonDetail.map(md => {
                 const hargaAwal = md.menu_detail.harga
@@ -134,30 +143,29 @@ const readDiskon = async (req: Request, res: Response) => {
                     nama_makanan: md.menu_detail.nama_makanan,
                     harga_awal: hargaAwal,
                     harga_setelah_diskon: Math.round(
-                        hargaAwal - hargaAwal * (d.persentase_diskon / 100)
+                        hargaAwal - (hargaAwal * d.persentase_diskon) / 100
                     )
                 }
             })
 
             return {
                 id: d.id,
-                id_stan: stan.id,
                 nama_diskon: d.nama_diskon,
                 persentase_diskon: d.persentase_diskon,
                 tanggal_awal: d.tanggal_awal,
                 tanggal_akhir: d.tanggal_akhir,
-                status,
+                status: labelStatus,
                 jumlah_menu: menu.length,
                 menu
             }
         })
 
         return res.status(200).json({
-            message: `Data diskon stan`,
+            message: `Data diskon berhasil ditampilkan`,
             data: result
         })
     } catch (error) {
-        console.log(error)
+        console.error(error)
         return res.status(500).json({ message: `Terjadi kesalahan server` })
     }
 }

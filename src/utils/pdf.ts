@@ -9,7 +9,7 @@ export async function generatePdf(html: string) {
     await page.setContent(html, { waitUntil: "networkidle0" })
 
     const pdfBuffer = await page.pdf({
-        width: "58mm",
+        width: "58mm",   //lebar kertas nya
         printBackground: true,
         scale: 1.2
     })

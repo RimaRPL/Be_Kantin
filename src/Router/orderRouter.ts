@@ -3,6 +3,7 @@ import { createTransaksiValidation } from "../Middleware/orderValidation";
 import { createTransaksi, masakStatus, antarStatus, sampaiStatus, readTransaksiSiswa, readTransaksiByBulanAdmin } from "../Controller/orderController";
 import { verifyToken } from "../Middleware/auth/verifyToken";
 import { verifyAdmin, verifySiswa } from "../Middleware/auth/verifyRole";
+import { checkStanActive } from "../Middleware/adminStanValidation";
 
 const router = Router()
 
@@ -12,15 +13,15 @@ router.post(`/`, [verifyToken, verifySiswa, createTransaksiValidation], createTr
 /** route for status */
 // dimasak
 router.patch(
-    `/:id/masak`, [verifyToken, verifyAdmin], masakStatus
+    `/:id/masak`, [verifyToken, verifyAdmin, checkStanActive], masakStatus
 )
 // diantar
 router.patch(
-    `/:id/antar`, [verifyToken, verifyAdmin], antarStatus
+    `/:id/antar`, [verifyToken, verifyAdmin, checkStanActive], antarStatus
 )
 // sampai
 router.patch(
-    `/:id/sampai`, [verifyToken, verifyAdmin], sampaiStatus
+    `/:id/sampai`, [verifyToken, verifyAdmin, checkStanActive], sampaiStatus
 )
 
 // router by siswa
@@ -36,7 +37,7 @@ router.get(
  */
 
 router.get(
-    `/admin`, [verifyToken, verifyAdmin], readTransaksiByBulanAdmin
+    `/admin`, [verifyToken, verifyAdmin, checkStanActive], readTransaksiByBulanAdmin
 )
 //bisa difilter
 /**
