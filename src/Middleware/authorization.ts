@@ -3,14 +3,15 @@ import Joi from "joi";
 
 // vaidasi untuk login
 const authSchema = Joi.object({
-  username: Joi.string().required(),
-  password: Joi.string().required()
+  username: Joi.string().min(3).required(),
+  password: Joi.string().min(8).required()
 })
 
 const authValidation = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  //mengecek apakah request sesuai schema.
   const validation = authSchema.validate(req.body)
   if (validation.error) {
-    res.status(400)
+    return res.status(400)
       .json({
         message: validation
           .error

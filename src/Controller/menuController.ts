@@ -12,6 +12,7 @@ const createMenu = async (req: Request, res: Response) => {
     // stan diambil dari middleware checkStanActive
     const stan = req.stan;
 
+    // mengambil data request
     const nama_makanan: string = req.body.nama_makanan
     const harga: number = Number(req.body.harga)
     const jenis: MenuType = req.body.jenis
@@ -19,12 +20,12 @@ const createMenu = async (req: Request, res: Response) => {
     const deskripsi: string = req.body.deskripsi
     const id_stan = stan.id
 
-    // menyimpan data menu
+    // menyimpan data menu ke database
     const newMenu = await prisma.menu.create({
       data: {
-        nama_makanan, harga, jenis, foto, deskripsi, id_stan, is_active: true
+        nama_makanan, harga, jenis, foto, deskripsi, id_stan, is_active: true   //menu langsung active
       },
-      select: {
+      select: {   //data yang ditampilkan ke client
         id: true,
         nama_makanan: true,
         harga: true,
@@ -36,12 +37,12 @@ const createMenu = async (req: Request, res: Response) => {
             id: true,
             nama_stan: true,
             nama_pemilik: true,
-            telp: true,
-            id_user: true
+            telp: true
           }
         }
       }
     })
+
     return res.status(200).json({
       message: `Menu telah dibuat`,
       data: newMenu
@@ -49,7 +50,6 @@ const createMenu = async (req: Request, res: Response) => {
     })
   } catch (error) {
     console.log(error)
-
     // bersihkan file kalau error
     if (req.file) {
       const filePath = `${ROOT_DIRECTORY}/public/foto-menu/${req.file.filename}`;
@@ -57,23 +57,24 @@ const createMenu = async (req: Request, res: Response) => {
     }
 
     return res.status(500).json(error)
-
-
   }
 }
 
 // READ MENU PUBLIC
 const readMenu = async (req: Request, res: Response) => {
   try {
+    //penggunaan filter 
     const search = req.query.search?.toString() ?? "";
     const jenis = req.query.jenis as "makanan" | "minuman" | undefined;
     const stanId = req.query.stan ? Number(req.query.stan) : undefined;
     const diskon = req.query.diskon === "ada" ? true : req.query.diskon === "tidak" ? false : undefined;
+
+    //hari ini
     const today = new Date();
 
     const allMenu = await prisma.menu.findMany({
-      where: {
-        is_active: true,
+      where: {   //filter relasi
+        is_active: true,   //menu tdk active tidak tampil
         //filter by jenis
         ...(jenis && { jenis }),
         //filter by stan
@@ -103,7 +104,7 @@ const readMenu = async (req: Request, res: Response) => {
             },
           },
         }),
-        // Search by nama menu OR nama stan
+        // search by nama menu OR nama stan
         ...(search && {
           OR: [
             {
@@ -125,15 +126,15 @@ const readMenu = async (req: Request, res: Response) => {
           },
         },
         menu_diskonDetail: {
-          where: {
+          where: {  
             diskon_detail: {
-              tanggal_awal: { lte: today },
+              tanggal_awal: { lte: today },  //menampilkan diskon yang berlaku hari ini
               tanggal_akhir: { gte: today },
             },
           },
-          include: {
+          include: { // mengambil relasi
             diskon_detail: {
-              select: {
+              select: {   //memilih hanya menampilkan
                 nama_diskon: true,
                 persentase_diskon: true,
               },
@@ -151,16 +152,19 @@ const readMenu = async (req: Request, res: Response) => {
     }
 
     const result = allMenu.map((menu) => {
+      //mengambil harga asli dari menu database
       const harga_awal = menu.harga;
 
       const diskonRelasi = menu.menu_diskonDetail[0];
+      //mengambil detail diskon , fungsi ? jika tdk ada diskon hasil undifine
       const diskon = diskonRelasi?.diskon_detail;
-
+      //mengambil persentase diskon 
       const persentase_diskon = diskon?.persentase_diskon ?? 0;
+      //hitung harga setelah diskon
       const harga_setelah_diskon =
         persentase_diskon > 0
           ? Math.round(harga_awal - (harga_awal * persentase_diskon) / 100)
-          : harga_awal;
+          : harga_awal;  //klo tdk ada harga awal
 
       return {
         id: menu.id,
@@ -183,6 +187,7 @@ const readMenu = async (req: Request, res: Response) => {
       total_data: result.length,
       data: result,
     });
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -352,6 +357,7 @@ const readMenuAdmin = async (req: Request, res: Response) => {
         id: menu.id,
         nama_makanan: menu.nama_makanan,
         jenis: menu.jenis,
+        deskripsi: menu.deskripsi,
         harga_awal,
         harga_setelah_diskon,
         diskon_detail: diskon ? {
@@ -396,6 +402,7 @@ const updateMenu = async (req: Request, res: Response) => {
       }
     }
 
+    //ambi data baru dari body
     const {
       nama_makanan, harga, jenis, deskripsi
     } = req.body
@@ -409,9 +416,23 @@ const updateMenu = async (req: Request, res: Response) => {
         jenis: jenis ?? menu.jenis,
         foto: req.file ? req.file.filename : menu.foto,
         deskripsi: deskripsi ? deskripsi : menu.deskripsi,
-
       },
-      include: { stan_detail: true }
+      select: {   //data yang ditampilkan ke client
+        id: true,
+        nama_makanan: true,
+        harga: true,
+        jenis: true,
+        deskripsi: true,
+        foto: true,
+        stan_detail: {
+          select: {
+            id: true,
+            nama_stan: true,
+            nama_pemilik: true,
+            telp: true,
+          }
+        }
+      }
     })
 
     return res.status(200).json({
@@ -443,7 +464,6 @@ const deleteMenu = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error)
     return res.status(500).json
-
   }
 }
 

@@ -11,10 +11,10 @@ const prisma = new PrismaClient()
 // CREATE SISWA
 /** buat a validasi untuk menambah siswa */
 const createSiswaSchema = Joi.object({
-    nama_siswa: Joi.string().min(3).required(),
-    alamat: Joi.string().min(5).required(),
-    telp: Joi.string().min(10).max(13).required(),
-    username: Joi.string().min(3).required(),
+    nama_siswa: Joi.string().trim().min(3).required(),
+    alamat: Joi.string().trim().min(5).required(),
+    telp: Joi.string().pattern(/^[0-9]+$/).min(10).max(13).required(),
+    username: Joi.string().trim().min(3).required(),
     password: Joi.string().min(8).required()
 })
 
@@ -44,11 +44,11 @@ const createSiswaValidation = async (
 // UPDATE SISWA
 /** buat a validasi untuk mengupdate siswa */
 const updateSiswaSchema = Joi.object({
-    nama_siswa: Joi.string().min(3).optional(),
-    alamat: Joi.string().min(5).optional(),
-    telp: Joi.string().min(10).max(13).optional(),
-    username: Joi.string().optional(),
-    password: Joi.string().optional()
+    nama_siswa: Joi.string().trim().min(3).optional(),
+    alamat: Joi.string().trim().min(5).optional(),
+    telp: Joi.string().pattern(/^[0-9]+$/).min(10).max(13).optional(),
+    username: Joi.string().trim().min(3).optional(),
+    password: Joi.string().min(8).optional()
 })
 
 const updateSiswaValidation = (req: Request, res: Response, next: NextFunction): any => {
@@ -78,7 +78,7 @@ const checkSiswaActive = async (
 ) => {
     const id = Number(req.params.id);
 
-    if(Number.isNaN(id)){
+    if (Number.isNaN(id)) {
         return res.status(400).json({
             message: `id tidak valid `
         })
@@ -87,12 +87,12 @@ const checkSiswaActive = async (
     const siswa = await prisma.siswa.findFirst({
         where: {
             id,
-            deleted_at:null,
+            deleted_at: null,
             is_active: true
         }
     })
 
-    if(!siswa){
+    if (!siswa) {
         return res.status(404).json({
             message: `Siswa sudah dihapus`
         })

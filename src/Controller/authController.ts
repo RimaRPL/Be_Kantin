@@ -24,6 +24,7 @@ const authentication = async (req: Request, res: Response) => {
                 })
         }
 
+        /** cek password */
         const isMatchPassword = await bcrypt.compare(password, findUsers.password)
 
         if (!isMatchPassword) {
@@ -33,14 +34,17 @@ const authentication = async (req: Request, res: Response) => {
                 })
         }
 
+        //Payload data identitas user yang dimasukkan ke dalam JWT token.
         const payload = {
             id: findUsers.id,
             username: findUsers.username,
             role: findUsers.role
         }
 
+        // mengambil secret data
         const signature = process.env.SECRET || ``
 
+        // membuat token jwt dengan batas berlaku 1 hari
         const token = jwt.sign(payload, signature, {
             expiresIn: "1d"
         });

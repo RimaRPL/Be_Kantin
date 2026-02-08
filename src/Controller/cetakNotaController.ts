@@ -46,7 +46,7 @@ const cetakNota = async (req: Request, res: Response) => {
       return res.status(404).json({ message: `Transaksi tidak ada` })
     }
 
-    // Mengubah struktur data dari database menjadi format yang dibutuhkan oleh template notaHtml
+    // mengubah struktur data dari database ke format yang dibutuhkan notaHtml
     const items = transaksi.detail_transaksi.map(item => {
       const subtotal = item.qty * item.harga_beli
 
@@ -60,24 +60,24 @@ const cetakNota = async (req: Request, res: Response) => {
       }
     })
 
-    // Memasukkan data ke dalam fungsi notaHtml untuk mendapatkan string HTML lengkap
+    // masukkan data ke dalam fungsi notaHtml untuk mendapatkan string HTML lengkap
     const html = notaHtml({
       namaStan: transaksi.stan_detail.nama_stan,
       namaSiswa: siswa.nama_siswa,
       orderId: transaksi.id,
-      // Memformat objek tanggal JS menjadi format tanggal & jam Indonesia
+      // format objek tanggal, jam JS menjadi format Indonesia
       tanggal: transaksi.tanggal.toLocaleDateString("id-ID"),
       jam: transaksi.tanggal.toLocaleTimeString("id-ID"),
       items
     })
 
-    // Mengirim string HTML ke library PDF generator (seperti Puppeteer)
+    // mengirim string HTML ke Puppeteer
     const pdf = await generatePdf(html)
 
-    // Memberitahu browser bahwa yang dikirim adalah file PDF
+    // mengirim tipe file PDF
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", "attachment; filename=nota.pdf")
-    // Mengirimkan PDF ke client
+    // mengirimkan PDF ke client
     return res.send(pdf)
 
   } catch (error) {

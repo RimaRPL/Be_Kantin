@@ -13,7 +13,7 @@ const createMenuSchema = Joi.object({
     nama_makanan: Joi.string().min(3).required(),
     harga: Joi.number().min(1000).required(),
     jenis: Joi.string().valid("makanan", "minuman").required(),
-    deskripsi: Joi.string().min(5).required()
+    deskripsi: Joi.string().min(10).required()
 })
 
 const createMenuValidation = async (
@@ -53,7 +53,7 @@ const updateMenuSchema = Joi.object({
     nama_makanan: Joi.string().min(3).optional(),
     harga: Joi.number().min(1000).optional(),
     jenis: Joi.string().valid("makanan", "minuman").optional(),
-    deskripsi: Joi.string().min(5).optional()
+    deskripsi: Joi.string().min(10).optional()
 })
 
 const updateMenuValidation = (req: Request, res: Response, next: NextFunction): any => {
@@ -86,6 +86,7 @@ const checkMenuActive = async (
     const user = (req as any).user
     const menuId = Number(req.params.id)
 
+    //cari menu di database
     const menu = await prisma.menu.findFirst({
         where: {
             id: menuId,

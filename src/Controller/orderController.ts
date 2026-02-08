@@ -6,10 +6,8 @@ const prisma = new PrismaClient({ errorFormat: "minimal" })
 
 const createTransaksi = async (req: Request, res: Response) => {
     try {
-        // cek user
         const user = (req as any).user
 
-        /* mengambil data siswa*/
         const siswa = await prisma.siswa.findFirst({
             where: {
                 id_user: user.id,
@@ -27,9 +25,10 @@ const createTransaksi = async (req: Request, res: Response) => {
             })
         }
 
-        // validasi order
+        // ambil order dari body
         const orders = req.body.orders
 
+        // order wajib array dan tidak boleh kosong
         if (!Array.isArray(orders) || orders.length === 0) {
             return res.status(400).json({
                 message: `Order tidak valid`
@@ -37,14 +36,13 @@ const createTransaksi = async (req: Request, res: Response) => {
         }
 
         const today = new Date()
-        const status = StatusType.belum_dikonfirmasi
+        const status = StatusType.belum_dikonfirmasi  //status default
         const resultTransaksi: any[] = []
 
         // loop pesanan per stan
         for (const order of orders) {
             const { id_stan, detail_transaksi } = order
 
-            //validasi stan
             const stan = await prisma.stan.findFirst({
                 where: {
                     id: Number(id_stan),
@@ -62,7 +60,7 @@ const createTransaksi = async (req: Request, res: Response) => {
                 })
             }
 
-            //validasi menuu
+            //ambil menuu
             const arrMenuId = detail_transaksi.map(
                 (item: any) => item.id_menu
             )
@@ -132,6 +130,7 @@ const createTransaksi = async (req: Request, res: Response) => {
 
                 const subtotal = harga_setelah_diskon * item.qty
 
+                //menyimpan dalam db
                 detailDB.push({
                     id_transaksi: transaksi.id,
                     id_menu: item.id_menu,
@@ -141,6 +140,7 @@ const createTransaksi = async (req: Request, res: Response) => {
                     harga_beli: harga_setelah_diskon
                 })
 
+                //detali respon yang muncul
                 detailResponse.push({
                     id_menu: item.id_menu,
                     qty: item.qty,
@@ -155,10 +155,12 @@ const createTransaksi = async (req: Request, res: Response) => {
                 data: detailDB
             })
 
+            //hitung total transaksi per stan
             const total_harga = detailResponse.reduce(
                 (total, item) => total + item.subtotal,
                 0
             )
+            //respon akhir
             resultTransaksi.push({
                 id_transaksi: transaksi.id,
                 tanggal: transaksi.tanggal,
@@ -247,8 +249,8 @@ const masakStatus = (req: Request, res: Response) =>
     updateStatusTransaksi(
         req,
         res,
-        StatusType.belum_dikonfirmasi,
-        StatusType.dimasak,
+        StatusType.belum_dikonfirmasi, //status sebelum nya (Prevstatus)
+        StatusType.dimasak,  //status selanjut nya (nextstatus)
         `Pesanan sedang dimasak`
     )
 
@@ -275,7 +277,7 @@ const sampaiStatus = (req: Request, res: Response) =>
 const readTransaksiSiswa = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user
-        const type = req.query.type // untuk filter berdasarkan jenis status
+        const type = req.query.type // untuk filter berdasarkan tipe history
         const bulan = Number(req.query.bulan)
         const statusQuery = req.query.status as StatusType | undefined //filter status
 
@@ -314,17 +316,17 @@ const readTransaksiSiswa = async (req: Request, res: Response) => {
             }
         }
 
-
         // FILTER BULAN
         let dateFilter: any = undefined
 
+        //kalau tipe histori harus memasukkan bulan
         if (type === "history") {
             if (!bulan || bulan < 1 || bulan > 12) {
                 return res.status(400).json({
-                    message: `Bulan wajib diisi untuk melihat histori`
+                    message: `bulan wajib diisi untuk melihat histori`
                 })
             }
-
+            
             if (!tahun) {
                 tahun = new Date().getFullYear()
             }
@@ -368,12 +370,12 @@ const readTransaksiSiswa = async (req: Request, res: Response) => {
             }
         })
 
-
-        // untuk menampilkan total transaksi ( krn tidak ada dischema)
-        const result = transaksi.map(trx => {
+        // untuk menampilkan total transaksi 
+        const result = transaksi.map(tr => {
             let total_harga = 0
 
-            const detail = trx.detail_transaksi.map(item => {
+            //hitung subtotal
+            const detail = tr.detail_transaksi.map(item => {
                 const subtotal = item.qty * item.harga_beli
                 total_harga += subtotal
 
@@ -387,19 +389,18 @@ const readTransaksiSiswa = async (req: Request, res: Response) => {
             })
 
             return {
-                id_transaksi: trx.id,
-                tanggal: trx.tanggal,
-                status: trx.status,
+                id_transaksi: tr.id,
+                tanggal: tr.tanggal,
+                status: tr.status,
                 stan: {
-                    id: trx.stan_detail.id,
-                    nama_stan: trx.stan_detail.nama_stan,
-                    pemilik: trx.stan_detail.nama_pemilik
+                    id: tr.stan_detail.id,
+                    nama_stan: tr.stan_detail.nama_stan,
+                    pemilik: tr.stan_detail.nama_pemilik
                 },
                 detail: detail,
                 total_harga
             }
         })
-
 
         return res.status(200).json({
             message: type === "history"
@@ -476,10 +477,10 @@ const readTransaksiByBulanAdmin = async (req: Request, res: Response) => {
             }
         })
 
-        const data = transaksi.map(trx => {
+        const data = transaksi.map(tr => {
             let total_harga = 0
 
-            const detail = trx.detail_transaksi.map(item => {
+            const detail = tr.detail_transaksi.map(item => {
                 const subtotal = item.qty * item.harga_beli
                 total_harga += subtotal
 
@@ -492,19 +493,20 @@ const readTransaksiByBulanAdmin = async (req: Request, res: Response) => {
             })
 
             return {
-                id_transaksi: trx.id,
-                tanggal: trx.tanggal,
-                status: trx.status,
+                id_transaksi: tr.id,
+                tanggal: tr.tanggal,
+                status: tr.status,
                 siswa: {
-                    id: trx.siswa_detail.id,
-                    nama: trx.siswa_detail.nama_siswa
+                    id: tr.siswa_detail.id,
+                    nama: tr.siswa_detail.nama_siswa
                 },
                 detail,
                 total_harga
             }
         })
+        
         return res.status(200).json({
-            message: "Data transaksi berhasil diambil",
+            message:  `Data transaksi berhasil diambil`,
             informasi: {
                 bulan,
                 tahun,

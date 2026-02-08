@@ -97,6 +97,7 @@ export const notaHtml = (data: {
   }
   .disc-tag {
     font-size: 10px;
+    font-weight: bold;
   }
   .actual-price {
     font-size: 12px;
@@ -164,7 +165,7 @@ export const notaHtml = (data: {
 
   <div class="footer">
     *** TERIMA KASIH ***<br>
-    Silahkan Tunggu Pesanan Anda
+    Selamat Menikmati Pesanan Anda
   </div>
 
 </body>

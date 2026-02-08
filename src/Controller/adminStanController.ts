@@ -10,8 +10,6 @@ const createAdminStan = async (req: Request, res: Response) => {
         const nama_stan: string = req.body.nama_stan
         const nama_pemilik: string = req.body.nama_pemilik
         const telp: string = req.body.telp
-
-        // ini untuk users
         const username: string = req.body.username
         const password: string = req.body.password
 
@@ -52,7 +50,6 @@ const createAdminStan = async (req: Request, res: Response) => {
 // READ 
 const readAdminStan = async (req: Request, res: Response) => {
     try {
-
         const user = (req as any).user
 
         const Stan = await prisma.stan.findMany({
@@ -61,7 +58,11 @@ const readAdminStan = async (req: Request, res: Response) => {
                 deleted_at: null,
                 is_active: true
             },
-            include: {
+            select: {
+                id: true,
+                nama_stan: true,
+                nama_pemilik: true,
+                telp: true,
                 users_detail: {
                     select: {
                         id: true,
@@ -180,7 +181,6 @@ const updateAdminStan = async (req: Request, res: Response) => {
 // DELETE
 const deleteAdminStan = async (req: Request, res: Response) => {
     try {
-
        const user = (req as any).user
 
         const Stan = await prisma.stan.findFirst({
@@ -211,7 +211,6 @@ const deleteAdminStan = async (req: Request, res: Response) => {
                 is_active: false
             }
         })
-
 
         return res.status(200).json({
             message: `Stan telah dihapus`

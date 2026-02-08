@@ -9,7 +9,6 @@ const prisma = new PrismaClient({ errorFormat: "minimal" });
 // CREATE
 const createSiswa = async (req: Request, res: Response) => {
     try {
-
         //ambil data dari request
         const nama_siswa: string = req.body.nama_siswa
         const alamat: string = req.body.alamat
@@ -59,6 +58,7 @@ const createSiswa = async (req: Request, res: Response) => {
 // READ
 const readSiswa = async (req: Request, res: Response) => {
     try {
+        // mengambil data user dari middleware
         const user = (req as any).user
 
         if (user.role === "siswa") {
@@ -255,7 +255,7 @@ const updateSiswa = async (req: Request, res: Response) => {
 
         if (!siswa) {
             return res.status(404).json({
-                message: `Data siswa tidak ditemukan`
+                message: `Siswa tidak ditemukan`
             })
         }
 
@@ -274,7 +274,7 @@ const updateSiswa = async (req: Request, res: Response) => {
 
             if (cekUsername) {
                 return res.status(409).json({
-                    message: "Username sudah digunakan"
+                    message: `Username sudah digunakan`
                 })
             }
         }

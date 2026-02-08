@@ -28,6 +28,7 @@ const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
 
     /** memferifikasi token */
     const signature = process.env.SECRET || ""
+    //mengambil isi payload
     const decoded = jwt.verify(token, signature) as JwtPayload
 
     if (!decoded.id) {

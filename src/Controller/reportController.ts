@@ -64,13 +64,15 @@ const rekapPemasukanBulanan = async (
 
         // hitung total pemasukkan dan rekap harian
         let totalPemasukan = 0
+        //rekap harian untuk menghitung pemasukkan per tanggal
         const rekapHarian: Record<string, number> = {}
 
-        transaksi.forEach(trx => {
+        //loop transaksi
+        transaksi.forEach(tr => {
             // ambil tanggal format tahun-bulan-hari
-            const tanggal = trx.tanggal.toISOString().split("T")[0]
+            const tanggal = tr.tanggal.toISOString().split("T")[0]
 
-            trx.detail_transaksi.forEach(item => {
+            tr.detail_transaksi.forEach(item => {
                 // hitung subtotal per item
                 const subtotal = item.qty * item.harga_beli
                 totalPemasukan += subtotal
@@ -80,6 +82,7 @@ const rekapPemasukanBulanan = async (
             })
         })
 
+        //mengubah ke array ( object key nya)
         const rekapPerHari = Object.keys(rekapHarian).map(tgl => ({
             tanggal: tgl,
             pemasukan: rekapHarian[tgl]
