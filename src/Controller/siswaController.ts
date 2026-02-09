@@ -130,7 +130,6 @@ const readSiswa = async (req: Request, res: Response) => {
     }
 }
 
-
 // UPDATE by admin
 const updateSiswabyId = async (req: Request, res: Response) => {
     try {
@@ -238,7 +237,7 @@ const updateSiswabyId = async (req: Request, res: Response) => {
     }
 }
 
-//update by siswa 
+//UPDATE by siswa 
 const updateSiswa = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user
@@ -325,7 +324,6 @@ const updateSiswa = async (req: Request, res: Response) => {
         })
     }
 }
-
 
 // DELETE
 const deleteSiswa = async (req: Request, res: Response) => {

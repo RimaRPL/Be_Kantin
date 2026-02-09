@@ -243,7 +243,6 @@ const updateStatusTransaksi = async (
     }
 }
 
-
 // UPDATE PER STEP JADI GA LANGSUNG DAN INI URUT HANYA UNTUK ADMIN 
 const masakStatus = (req: Request, res: Response) =>
     updateStatusTransaksi(
@@ -271,7 +270,6 @@ const sampaiStatus = (req: Request, res: Response) =>
         StatusType.sampai,
         `Pesanan sudah sampai`
     )
-
 
 // READ UNTUK SISWA 
 const readTransaksiSiswa = async (req: Request, res: Response) => {
